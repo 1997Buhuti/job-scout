@@ -1,0 +1,22 @@
+# package dependencies
+node_modules
+jspm_packages
+
+# Serverless directories
+.serverless
+
+# esbuild directories
+.esbuild
+
+# coverage directories
+coverage
+lib
+
+# IDE / OS
+.idea
+.vscode
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example

@@ -1,0 +1,5 @@
+export const TEST_SERVICE = 'TEST-SERVICE';
+export const ERROR_MIDDLEWARE = 'ERROR-MIDDLEWARE';
+
+export const UNAUTHORIZED = 'UNAUTHORIZED';
+export const FORBIDDEN = 'FORBIDDEN';
