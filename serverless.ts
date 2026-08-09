@@ -10,6 +10,7 @@ const Custom = getCustom();
  * Add `serverless-<domain>.ts` child stacks as the app grows (products, orders, payments, etc.).
  */
 const serverlessConfiguration: AWS = {
+  org: 'manakal',
   service: 'ecommerce-api-init',
   frameworkVersion: '4',
   useDotenv: true,
@@ -30,11 +31,12 @@ const serverlessConfiguration: AWS = {
       basePath: '',
     },
   },
-  plugins: ['serverless-esbuild', 'serverless-offline', 'serverless-plugin-log-retention', 'serverless-prune-plugin'],
+  plugins: ['serverless-esbuild', 'serverless-offline', 'serverless-plugin-log-retention'],
   provider: {
     name: 'aws',
     runtime: 'nodejs24.x',
-    stage: '${sls:stage}',
+    profile: 'personal_cli_user',
+    stage: '${opt:stage, "dev"}',
     region: '${opt:region, "us-east-1"}' as AWS['provider']['region'],
     apiGateway: {
       minimumCompressionSize: 1024,
