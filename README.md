@@ -1,62 +1,62 @@
-# Ecommerce API
+# Job Scout
 
-Serverless Framework v4 + TypeScript base project, patterned after BodyShop Booster (`boost-api`).
+Monorepo for the Job Scout web app and API.
 
-## Architecture
-
-| Piece | Role |
-| --- | --- |
-| `serverless.ts` | Init stack (`ecommerce-api-init`) — API Gateway + test Lambda |
-| `src/functions/` | Standalone Lambdas (test, authorizers, etc.) |
-| `src/modules/` | Domain features (products, orders, …) — add as you grow |
-| `src/common/` | Shared response helpers, errors, logger, Middy wrapper |
-| `src/libs/` | Thin helpers (`middyfy`, API Gateway types) |
-| `src/serverless/` | Shared Serverless config (esbuild, prune, offline) |
-| `src/data/` | DB clients / repositories (placeholder) |
-
-Config is **strictly TypeScript** (`serverless.ts`), not YAML.
-
-Path aliases: `@common/*`, `@functions/*`, `@libs/*`, `@modules/*`, `@data/*`.
+| Package | Path | Role |
+| --- | --- | --- |
+| `@job-scout/frontend` | `frontend/` | Next.js app (App Router, TypeScript, Tailwind) |
+| `@job-scout/backend` | `backend/` | Serverless Framework v4 + TypeScript API |
 
 ## Prerequisites
 
-- Node.js ≥ 24
-- Serverless Framework v4 (`npm i -g serverless` or use the local binary)
-- AWS credentials configured if you deploy
+- Node.js ≥ 24 (see `.nvmrc`)
+- AWS credentials if you deploy the API
 
 ## Setup
 
 ```bash
-cd "C:\My Projhects\ecommerce-api"
 npm install
-cp .env.example .env
 ```
 
-## Local
+Copy `backend/.env.example` to `backend/.env` before deploying. Local offline mode works without AWS keys.
+
+## Scripts
 
 ```bash
-npm start
+npm run dev            # API on :3000 and web app on :3001
+npm run dev:backend    # API only — GET http://localhost:3000/dev/test
+npm run dev:frontend   # web app only — http://localhost:3001
+npm test               # backend tests
+npm run build          # production build of the web app
 ```
 
-Test endpoint: `GET http://localhost:3000/dev/test`
-
-## Deploy
+Deploy the API from the repo root:
 
 ```bash
-npm run deploy
-# or a single function:
-npm run deploy:func -- TestEndpoint
+npm run deploy -w @job-scout/backend
+npm run deploy:func -w @job-scout/backend -- TestEndpoint
 ```
 
-## Adding a feature 
+## Backend
 
-1. Create `src/modules/<domain>Module/<feature>/` with `handler.ts`, action files, and `index.ts` exporting `AWS['functions']`.
-2. Wire those functions into `serverless.ts` (or a new `serverless-<stack>.ts` when the stack grows).
+Config is TypeScript (`backend/serverless.ts`), not YAML.
+
+| Piece | Role |
+| --- | --- |
+| `serverless.ts` | Init stack — API Gateway + test Lambda |
+| `src/functions/` | Standalone Lambdas |
+| `src/modules/` | Domain features — add as you grow |
+| `src/common/` | Response helpers, errors, logger, Middy wrapper |
+| `src/libs/` | Thin helpers |
+| `src/serverless/` | Shared Serverless config |
+
+Path aliases: `@common/*`, `@functions/*`, `@libs/*`, `@modules/*`, `@data/*`.
+
+### Adding a feature
+
+1. Create `backend/src/modules/<domain>Module/<feature>/` with `handler.ts`, action files, and `index.ts` exporting `AWS['functions']`.
+2. Wire those functions into `backend/serverless.ts`.
 3. Export `main = wrapper(handler)` from `handler.ts`.
-4. Register a service name in `src/common/constants.ts`.
+4. Register a service name in `backend/src/common/constants.ts`.
 
-## Test Lambda
-
-- **Name:** `TestEndpoint`
-- **Path:** `GET /test`
-- **Handler:** `src/functions/test/handler.main`
+Test Lambda: `TestEndpoint` — `GET /test` — `src/functions/test/handler.main`.

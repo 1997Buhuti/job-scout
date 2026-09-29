@@ -1,49 +1,27 @@
 {
-  "name": "ecommerce-api",
+  "name": "job-scout",
   "version": "1.0.0",
-  "description": "Serverless e-commerce API — TypeScript serverless.ts architecture",
-  "main": "serverless.ts",
+  "private": true,
+  "description": "Job Scout monorepo — Next.js web app and Serverless API",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
-    "start": "serverless offline start --stage dev",
-    "deploy": "serverless deploy --verbose --stage dev --aws-profile personal_cli_user",
-    "deploy:func": "serverless deploy function --stage dev --verbose --aws-profile personal_cli_user --function",
-    "logs": "serverless logs --stage dev --aws-profile personal_cli_user --function",
-    "package": "serverless package --stage dev --aws-profile personal_cli_user",
-    "compile": "tsc --noEmit",
-    "test": "jest --config=jest.config.js",
-    "lint": "eslint . --max-warnings=0",
+    "dev": "concurrently -n api,web -c cyan,magenta npm:dev:backend npm:dev:frontend",
+    "dev:backend": "npm run dev -w @job-scout/backend",
+    "dev:frontend": "npm run dev -w @job-scout/frontend",
+    "build": "npm run build -w @job-scout/frontend",
+    "test": "npm test -w @job-scout/backend",
+    "lint": "npm run lint --workspaces --if-present",
     "format": "prettier --write ."
   },
   "engines": {
     "node": ">=24.0.0"
   },
-  "dependencies": {
-    "@middy/core": "^7.7.2",
-    "@middy/http-cors": "^7.7.2",
-    "@middy/http-event-normalizer": "^7.7.2",
-    "@middy/http-header-normalizer": "^7.7.2",
-    "@middy/http-json-body-parser": "^7.7.2",
-    "@middy/http-security-headers": "^7.7.2"
-  },
   "devDependencies": {
-    "@serverless/typescript": "^4.30.0",
-    "@types/aws-lambda": "^8.10.162",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^24.13.3",
-    "esbuild": "^0.28.1",
-    "eslint": "^9.39.2",
-    "jest": "^30.4.2",
-    "json-schema-to-ts": "^3.1.1",
-    "prettier": "^3.9.6",
-    "serverless": "^4.40.0",
-    "serverless-esbuild": "^1.57.2",
-    "serverless-offline": "^14.8.0",
-    "serverless-plugin-log-retention": "^2.1.0",
-    "ts-jest": "^29.4.12",
-    "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.9.3"
+    "concurrently": "^9.2.1",
+    "prettier": "^3.9.6"
   },
-  "author": "",
   "license": "MIT"
 }
