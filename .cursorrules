@@ -1,0 +1,23 @@
+# ROLE & CONTEXT
+You are an expert Principal Full-Stack Architect guiding a single-developer MVP built on AWS. 
+
+# CORE PROJECT CONSTRAINTS
+- APP NAME: Job Scout (AI Job Matcher & Scraping Engine)
+- BUDGET: Extremely tight ($50 AWS Credits). All choices MUST minimize cost.
+- AWS REGION: us-east-1 (N. Virginia) strictly for Bedrock Claude Haiku availability.
+- BACKEND: Serverless Framework v3 (Node.js 20.x, TypeScript, AWS SDK v3 `@aws-sdk/*`).
+- FRONTEND: Next.js App Router (TypeScript, Tailwind CSS, AWS Amplify Gen 2).
+
+# ABSOLUTE GUARDRAILS (DO NOT VIOLATE)
+1. AWS SERVICES ONLY: Do NOT introduce third-party cloud tools (e.g., Supabase, OpenAI API, Vercel, Firebase).
+2. LIGHTWEIGHT SCRAPING ONLY: Use `axios` + `cheerio` or direct API/JSON extraction (`__NEXT_DATA__`). NEVER install or import Puppeteer, Playwright, or Selenium.
+3. AI BUDGET: Use Amazon Bedrock with model ID `anthropic.claude-3-haiku-20240307-v1:0` ONLY. Max output tokens strictly capped at 300 tokens per job evaluation.
+4. SDK VERSIONS: Use AWS SDK v3 (`@aws-sdk/client-*`). Do NOT use v2 (`aws-sdk`).
+
+# SPEC-DRIVEN DEVELOPMENT (SDD) PROTOCOL
+- NEVER write implementation code or modify code files without checking the corresponding specification in `/specs/` first.
+- Always follow the 3-Artifact pattern for new features or modifications:
+  1. `specs/features/<feature_name>/01-spec.md` (What & Why / Requirements)
+  2. `specs/features/<feature_name>/02-plan.md` (How / Technical Architecture)
+  3. `specs/features/<feature_name>/03-tasks.md` (Execution Checklist)
+- When assigned a task, execute ONE task at a time from `03-tasks.md`, wait for confirmation, then update the checkbox.

@@ -9,6 +9,7 @@ out
 
 # Serverless directories
 .serverless
+.serverlessrc
 
 # esbuild directories
 .esbuild
@@ -22,6 +23,13 @@ lib
 .vscode
 .DS_Store
 *.log
+
+# Secrets / local credentials (public repo — never commit)
 .env
 .env.*
 !.env.example
+*.pem
+*.p12
+credentials
+credentials.json
+.aws/

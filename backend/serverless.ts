@@ -35,7 +35,7 @@ const serverlessConfiguration: AWS = {
   provider: {
     name: 'aws',
     runtime: 'nodejs24.x',
-    profile: 'personal_cli_user',
+    // No provider.profile — CI uses OIDC default chain; locally set AWS_PROFILE or pass --aws-profile
     stage: '${opt:stage, "dev"}',
     region: '${opt:region, "us-east-1"}' as AWS['provider']['region'],
     apiGateway: {
