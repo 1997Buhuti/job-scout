@@ -32,6 +32,13 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# Amplify Gen 2 (local sandbox outputs / artifacts — not secrets, but env-specific)
+amplify_outputs.json
+amplify_outputs.json.bak
+.amplify/
+.stitch-ref/
 
 # vercel
 .vercel

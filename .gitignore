@@ -33,3 +33,12 @@ lib
 credentials
 credentials.json
 .aws/
+
+# Amplify Gen 2 local sandbox (frontend)
+frontend/amplify_outputs.json
+frontend/amplify_outputs.json.bak
+frontend/.amplify/
+mcp.json
+
+.cursor/mcp.json
+frontend/.env.example

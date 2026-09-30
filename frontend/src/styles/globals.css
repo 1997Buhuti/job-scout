@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #12131a;
+  --color-surface: #12131a;
+  --color-surface-container-lowest: #0d0e15;
+  --color-surface-container-low: #1a1b22;
+  --color-surface-container: #1e1f26;
+  --color-surface-container-high: #292931;
+  --color-surface-container-highest: #33343c;
+  --color-on-surface: #e3e1ec;
+  --color-on-surface-variant: #c8c5ca;
+  --color-outline: #919095;
+  --color-outline-variant: #47464a;
+  --color-primary: #c8c6c8;
+  --color-on-primary: #313032;
+  --color-secondary: #4edea3;
+  --color-secondary-fixed: #6ffbbe;
+  --color-on-secondary: #003824;
+  --color-error: #ffb4ab;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  font-family: var(--font-sans);
+}
+
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined", sans-serif;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  user-select: none;
+}
+
+/* Amplify Authenticator overrides kept minimal — custom auth forms are primary */
+[data-amplify-authenticator] {
+  --amplify-components-authenticator-router-background-color: var(--color-surface-container-low);
+  --amplify-components-button-primary-background-color: var(--color-secondary);
+  --amplify-components-button-primary-color: var(--color-on-secondary);
+}

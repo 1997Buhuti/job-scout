@@ -1,0 +1,72 @@
+---
+description: Domain/feature-driven Next.js frontend folder structure for Job Scout
+globs: frontend/**/*.{ts,tsx,css}
+alwaysApply: true
+---
+
+# Frontend: Feature-Driven Structure
+
+All new frontend work lives under `frontend/` using domain modules. **Do not** dump domain UI into `components/` or put business logic in `app/`.
+
+## Layout (canonical)
+
+```text
+frontend/
+├── public/
+├── src/
+│   ├── app/                    # Routing & pages ONLY (thin)
+│   │   ├── (auth)/             # login, signup + auth layout
+│   │   ├── (dashboard)/        # authenticated app routes
+│   │   ├── api/                # Route handlers only when needed
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   ├── providers.tsx
+│   │   ├── error.tsx | loading.tsx | not-found.tsx
+│   ├── actions/                # Shared server actions (or colocate in features/)
+│   ├── components/
+│   │   ├── ui/                 # Primitives (Button, Input, Badge)
+│   │   └── common/             # Header, Footer, Sidebar
+│   ├── features/               # Domain modules (preferred home for logic)
+│   │   └── <domain>/           # e.g. auth, profile, cv, matches
+│   │       ├── api/
+│   │       ├── components/
+│   │       ├── hooks/
+│   │       ├── types/
+│   │       └── utils/
+│   ├── hooks/                  # Shared hooks only
+│   ├── lib/                    # Amplify, API client, SDK wrappers (AWS only)
+│   ├── styles/                 # globals.css, Tailwind overrides
+│   ├── types/
+│   └── utils/                  # Pure helpers (cn, formatters)
+├── middleware.ts
+└── …
+```
+
+## Placement rules
+
+| Put here | Do not put here |
+| --- | --- |
+| `app/**/page.tsx` — compose feature components | Forms, hooks, Amplify calls, API logic |
+| `features/<domain>/` — domain UI, hooks, types, API | Generic Button/Input (use `components/ui`) |
+| `components/ui` + `common` — reusable, domain-agnostic | Auth forms, profile editors, job cards |
+| `lib/` — Amplify config, `fetch` to Serverless API | Feature-specific parsers |
+
+## Job Scout domains (add as features land)
+
+`auth` · `profile` · `cv` · `matches` (job matching) · `scheduler`
+
+## Imports
+
+- Prefer `@/features/<domain>/...`, `@/components/ui/...`, `@/lib/...`
+- Route groups `(auth)` / `(dashboard)` must **not** change public URLs (`/login`, `/signup`, `/settings`)
+- No Prisma/Stripe/Vercel — use Amplify Cognito + Serverless API under `lib/`
+
+## ❌ Bad / ✅ Good
+
+```text
+❌ src/components/auth/SignInForm.tsx
+✅ src/features/auth/components/SignInForm.tsx
+
+❌ src/app/login/SignInForm.tsx
+✅ src/app/(auth)/login/page.tsx  → imports from features/auth
+```
