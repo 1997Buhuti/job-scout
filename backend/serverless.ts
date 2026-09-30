@@ -6,12 +6,12 @@ import { getCustom } from './src/serverless/configs/serverless-common.config';
 const Custom = getCustom();
 
 /**
- * Init stack — mirrors boost-api `serverless.ts`.
- * Add `serverless-<domain>.ts` child stacks as the app grows (products, orders, payments, etc.).
+ * Job Scout API — Serverless Framework init stack.
+ * Add domain stacks as features grow.
  */
 const serverlessConfiguration: AWS = {
   org: 'manakal',
-  service: 'ecommerce-api-init',
+  service: 'job-scout-api',
   frameworkVersion: '4',
   useDotenv: true,
   params: {

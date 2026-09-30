@@ -153,6 +153,10 @@ jobs:
 
 Prefer `environment:production` subject over `ref:refs/heads/main` alone so only the Environment-gated job can assume the role.
 
+**Important (GitHub subject format):** some repos emit `sub` with numeric IDs, e.g.  
+`repo:1997Buhuti@66108524/job-scout@1394925760:environment:production`  
+— not `repo:1997Buhuti/job-scout:environment:production`. Match the **exact** `sub` from a decoded OIDC token (or add `ref` as a separate condition key).
+
 ### 3. Role permissions
 
 Least privilege for Serverless deploy to this stack (CloudFormation, Lambda, API Gateway, IAM role updates for functions, S3 for packages, CloudWatch Logs, EventBridge, DynamoDB, S3 app buckets, SES, Bedrock invoke as needed). Start narrow; expand only when deploy fails on missing permissions. Avoid `AdministratorAccess` on a public repo’s deploy role if possible.

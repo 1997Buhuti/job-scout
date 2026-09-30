@@ -36,20 +36,6 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      # TEMP: remove after OIDC works — prints token claims (sub/ref/aud) for trust-policy debugging
-      - name: Debug OIDC token claims
-        run: |
-          set -euo pipefail
-          echo "Role ARN secret set? $([ -n "${{ secrets.AWS_ROLE_ARN }}" ] && echo yes || echo NO_EMPTY)"
-          echo "Ref: $GITHUB_REF"
-          echo "Repository: $GITHUB_REPOSITORY"
-          REQUEST_URL="${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com"
-          TOKEN=$(curl -sS -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${REQUEST_URL}" | jq -r .value)
-          PAYLOAD=$(echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+')
-          PAD=$((4 - ${#PAYLOAD} % 4))
-          if [ "$PAD" -lt 4 ]; then PAYLOAD="${PAYLOAD}$(printf '%*s' "$PAD" | tr ' ' '=')"; fi
-          echo "$PAYLOAD" | base64 -d 2>/dev/null | jq '{sub, aud, ref, repository, job_workflow_ref, environment}'
-
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -65,6 +51,5 @@ jobs:
         run: npx serverless deploy --stage prod --region us-east-1
         env:
           SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
-          # Ensure Serverless/AWS SDK use the OIDC session, not a missing local profile
           AWS_PROFILE: ''
           AWS_SDK_LOAD_CONFIG: '0'
