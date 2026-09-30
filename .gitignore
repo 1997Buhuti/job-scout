@@ -16,7 +16,9 @@ out
 
 # coverage directories
 coverage
-lib
+
+# Backend tsc outDir (do not use bare `lib` — it also hides frontend/src/lib)
+backend/lib
 
 # IDE / OS
 .idea
