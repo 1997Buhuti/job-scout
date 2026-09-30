@@ -127,4 +127,5 @@ Scraping is **lightweight only**: `axios` + `cheerio`, or Next.js `__NEXT_DATA__
 | `.github/workflows/` | Backend CI (PRs) and prod deploy (OIDC) |
 
 Implementation must follow `/specs` before any code changes. See [01-sdd-workflow.md](./01-sdd-workflow.md).  
-Branching & CI/CD: [features/00-branching-cicd/01-spec.md](./features/00-branching-cicd/01-spec.md).
+Branching & CI/CD: [features/00-branching-cicd/01-spec.md](./features/00-branching-cicd/01-spec.md).  
+Delivery tracking: [JobScout GitHub Project](https://github.com/users/1997Buhuti/projects/1).
