@@ -18,12 +18,12 @@
 
 ## Backend setup
 
-- [ ] **B1.** Add DynamoDB users table resource to Serverless (`us-east-1`, on-demand, `PK`/`SK` per schema). Export `USERS_TABLE_NAME`. No GSI1 yet (scheduler feature owns it).
-- [ ] **B2.** Add AWS SDK v3 DynamoDB deps (`@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`) if missing. Do not add `aws-sdk` v2.
-- [ ] **B3.** Wire HTTP API Cognito JWT authorizer (issuer + audience from stage env / params â€” nothing secret committed).
-- [ ] **B4.** Implement `getProfile` Lambda (`GET /me/profile`): extract `sub` + `email`, get-or-create profile with defaults, return profile JSON.
-- [ ] **B5.** Implement `updateProfile` Lambda (`PUT /me/profile`): validate `targetRoles`, update item, return profile.
-- [ ] **B6.** Register both functions in Serverless; grant least-privilege DynamoDB IAM; smoke-test with a real Cognito ID token against `dev` or offline + mocked authorizer.
+- [x] **B1.** Add DynamoDB users table resource to Serverless (`us-east-1`, on-demand, `PK`/`SK` per schema). Export `USERS_TABLE_NAME`. No GSI1 yet (scheduler feature owns it).
+- [x] **B2.** Add AWS SDK v3 DynamoDB deps (`@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`) if missing. Do not add `aws-sdk` v2.
+- [x] **B3.** Wire HTTP API Cognito JWT authorizer (issuer + audience from stage env / params â€” nothing secret committed).
+- [x] **B4.** Implement `getProfile` Lambda (`GET /me/profile`): extract `sub` + `email`, get-or-create profile with defaults, return profile JSON.
+- [x] **B5.** Implement `updateProfile` Lambda (`PUT /me/profile`): validate `targetRoles`, update item, return profile.
+- [x] **B6.** Register both functions in Serverless; grant least-privilege DynamoDB IAM; smoke-test with a real Cognito ID token against `dev` or offline + mocked authorizer.
 
 ---
 
