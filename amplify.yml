@@ -1,0 +1,24 @@
+version: 1
+applications:
+  - appRoot: frontend
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - nvm use 24
+            # Install from monorepo root (workspaces lockfile) without leaving appRoot for artifacts
+            - npm ci --prefix ..
+        build:
+          commands:
+            # Webpack avoids Next 16 Turbopack .next/node_modules symlinks that
+            # Amplify's bundler cannot handle (aws-amplify/amplify-hosting#4074)
+            - npm run build -- --webpack
+      artifacts:
+        # Relative to appRoot — always frontend/.next when buildPath is unset
+        baseDirectory: .next
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - ../node_modules/**/*
+          - .next/cache/**/*

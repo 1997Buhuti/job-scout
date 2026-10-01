@@ -21,3 +21,10 @@ You are an expert Principal Full-Stack Architect guiding a single-developer MVP 
   2. `specs/features/<feature_name>/02-plan.md` (How / Technical Architecture)
   3. `specs/features/<feature_name>/03-tasks.md` (Execution Checklist)
 - When assigned a task, execute ONE task at a time from `03-tasks.md`, wait for confirmation, then update the checkbox.
+
+# FRONTEND STRUCTURE (FEATURE / DOMAIN-DRIVEN)
+- Follow `.cursor/rules/frontend-feature-structure.mdc` for all Next.js work.
+- `src/app/` = routes & page composition only (use route groups `(auth)`, `(dashboard)`).
+- Domain logic/UI lives in `src/features/<domain>/` (`api`, `components`, `hooks`, `types`, `utils`).
+- Shared primitives in `src/components/ui/` and `src/components/common/`; SDK init in `src/lib/`; global CSS in `src/styles/`.
+- Do not place feature forms or Amplify/auth logic under `src/components/` or inside route folders.

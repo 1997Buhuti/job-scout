@@ -16,7 +16,9 @@ out
 
 # coverage directories
 coverage
-lib
+
+# Backend tsc outDir (do not use bare `lib` — it also hides frontend/src/lib)
+backend/lib
 
 # IDE / OS
 .idea
@@ -43,3 +45,11 @@ mcp.json
 
 #remove amplify_outputs.json
 amplify_outputs.json
+
+# Amplify Gen 2 local sandbox (frontend)
+frontend/amplify_outputs.json
+frontend/amplify_outputs.json.bak
+frontend/.amplify/
+mcp.json
+
+frontend/.env.example
