@@ -33,3 +33,13 @@ lib
 credentials
 credentials.json
 .aws/
+
+# Amplify Gen 2 local build / CDK synth
+frontend/.amplify/
+
+#remove mcp.json and .cursor/mcp.json
+mcp.json
+.cursor/mcp.json
+
+#remove amplify_outputs.json
+amplify_outputs.json
