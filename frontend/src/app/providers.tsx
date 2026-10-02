@@ -3,6 +3,7 @@
 import { Amplify } from 'aws-amplify';
 import type { ReactNode } from 'react';
 
+import { UserProfileProvider } from '@/features/profile/context/UserProfileContext';
 import { getAmplifyConfig } from '@/lib/amplify/getAmplifyConfig';
 
 const config = getAmplifyConfig();
@@ -22,5 +23,5 @@ if (config) {
  * Client providers / SDK bootstrap for the App Router.
  */
 export function Providers({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return <UserProfileProvider>{children}</UserProfileProvider>;
 }

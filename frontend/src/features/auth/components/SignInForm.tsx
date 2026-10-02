@@ -5,12 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { signIn } from 'aws-amplify/auth';
 
+import { useUserProfile } from '@/features/profile/context/UserProfileContext';
+
 function fieldClassName() {
   return 'w-full rounded-lg border border-outline-variant/30 bg-surface-container px-4 py-3 text-sm text-on-surface outline-none transition-colors placeholder:text-outline focus:border-secondary';
 }
 
 export function SignInForm() {
   const router = useRouter();
+  const { refresh } = useUserProfile();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
@@ -26,6 +29,7 @@ export function SignInForm() {
       const result = await signIn({ username: email.trim(), password });
 
       if (result.isSignedIn) {
+        await refresh(true);
         router.replace('/');
         router.refresh();
         return;

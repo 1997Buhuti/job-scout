@@ -4,10 +4,13 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getCurrentUser, signOut } from 'aws-amplify/auth';
 
+import { useUserProfile } from '@/features/profile/context/UserProfileContext';
+
 /**
  * Home CTAs: Sign In / Sign Up, or Sign Out when a Cognito session exists.
  */
 export function HomeAuthActions() {
+  const { clear } = useUserProfile();
   const [signedIn, setSignedIn] = useState(false);
   const [ready, setReady] = useState(false);
   const [pending, setPending] = useState(false);
@@ -41,6 +44,7 @@ export function HomeAuthActions() {
     setPending(true);
     try {
       await signOut();
+      clear();
       setSignedIn(false);
     } finally {
       setPending(false);
