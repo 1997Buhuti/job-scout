@@ -9,8 +9,8 @@ import { Logger } from '@common/logger';
  * Maps thrown errors to API Gateway responses.
  * Register last so `onError` runs first and can short-circuit the chain.
  */
-export const errorHandlingMiddleware = (): middy.MiddlewareObj<APIGatewayProxyEvent, APIGatewayProxyResult> => {
-  const onError: middy.MiddlewareFn<APIGatewayProxyEvent, APIGatewayProxyResult> = async (request) => {
+export const errorHandlingMiddleware = <TEvent = APIGatewayProxyEvent>(): middy.MiddlewareObj<TEvent, APIGatewayProxyResult> => {
+  const onError: middy.MiddlewareFn<TEvent, APIGatewayProxyResult> = async (request) => {
     const logger = new Logger(ERROR_MIDDLEWARE, request.context?.awsRequestId);
     const error = request.error;
 

@@ -60,3 +60,12 @@ Path aliases: `@common/*`, `@functions/*`, `@libs/*`, `@modules/*`, `@data/*`.
 4. Register a service name in `backend/src/common/constants.ts`.
 
 Test Lambda: `TestEndpoint` — `GET /test` — `src/functions/test/handler.main`.
+
+| Function | Route | Auth | Handler |
+| --- | --- | --- | --- |
+| `TestEndpoint` | `GET /test` | none | `src/functions/test/handler.main` |
+| `getPresignedUrl` | `POST /cv/presign` | Cognito JWT | `src/modules/cvModule/getPresignedUrl/handler.main` |
+
+All routes are served by a single API Gateway **HTTP API** (payload format 2.0) — there is no REST API.
+
+`POST /cv/presign` returns `{ data: { uploadUrl, key, expiresIn } }` (all success responses are wrapped in `data`). The browser then PUTs the PDF straight to S3 with `Content-Type: application/pdf`. `CV_BUCKET_NAME` and the `s3:PutObject` grant are resolved from the `CvBucket` resource in `backend/src/serverless/resources/cv-bucket.ts`.
