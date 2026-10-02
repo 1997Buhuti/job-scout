@@ -1,4 +1,4 @@
-﻿# Feature: Auth & Profile â€” Tasks
+# Feature: Auth & Profile â€” Tasks
 
 **Feature slug:** `03-auth-profile`  
 **Follow:** [01-spec.md](./01-spec.md) Â· [02-plan.md](./02-plan.md)  
@@ -30,10 +30,10 @@
 ## Frontend UI integration
 
 - [x] **F1.** Add Amplify Gen 2 auth (Cognito) to the frontend; configure from Amplify outputs / env (no secrets in git).
-- [ ] **F2.** Add sign-up / sign-in / sign-out UX (Authenticator or equivalent).
-- [ ] **F3.** Add authenticated API helper that attaches `Authorization: Bearer <idToken>` and calls `NEXT_PUBLIC_API_URL`.
-- [ ] **F4.** Build profile/settings page: read-only email, `targetRoles` editor, save via `PUT /me/profile`, load via `GET /me/profile`.
-- [ ] **F5.** End-to-end: new user signs up â†’ profile created with defaults â†’ edits roles â†’ reload shows saved roles; signed-out API calls fail clearly.
+- [x] **F2.** Add sign-up / sign-in / sign-out UX (Authenticator or equivalent).
+- [x] **F3.** Add authenticated API helper that attaches `Authorization: Bearer <idToken>` and calls `NEXT_PUBLIC_API_URL`.
+- [x] **F4.** Build profile/settings page: read-only email, `targetRoles` editor, save via `PUT /me/profile`, load via `GET /me/profile`.
+- [x] **F5.** End-to-end: new user signs up → profile created with defaults → edits roles → reload shows saved roles; signed-out API calls fail clearly.
 
 ---
 
