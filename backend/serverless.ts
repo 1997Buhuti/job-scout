@@ -2,6 +2,7 @@ import type { AWS } from '@serverless/typescript';
 
 import { testFunctions } from './src/functions/test';
 import { getPresignedUrlFunctions } from './src/modules/cvModule/getPresignedUrl';
+import { parseCvPdfFunctions } from './src/modules/cvModule/parseCvPdf';
 import { getCustom } from './src/serverless/configs/serverless-common.config';
 import { getCvBucketResources } from './src/serverless/resources/cv-bucket';
 
@@ -61,6 +62,9 @@ const serverlessConfiguration: AWS = {
     environment: {
       STAGE: '${sls:stage}',
       AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+      USERS_TABLE_NAME: {
+        Ref: 'UsersTable',
+      },
     },
     // Merged into the default Lambda execution role, which keeps its
     // CloudWatch Logs grants.
@@ -74,6 +78,23 @@ const serverlessConfiguration: AWS = {
               'Fn::GetAtt': ['CvBucket', 'Arn'],
             },
           },
+          {
+            Effect: 'Allow',
+            Action: ['s3:GetObject'],
+            Resource: {
+              'Fn::Join': [
+                '',
+                [{ 'Fn::GetAtt': ['CvBucket', 'Arn'] }, '/*'],
+              ],
+            },
+          },
+          {
+            Effect: 'Allow',
+            Action: ['dynamodb:UpdateItem'],
+            Resource: {
+              'Fn::GetAtt': ['UsersTable', 'Arn'],
+            },
+          },
         ],
       },
     },
@@ -82,6 +103,7 @@ const serverlessConfiguration: AWS = {
   functions: {
     ...testFunctions,
     ...getPresignedUrlFunctions,
+    ...parseCvPdfFunctions,
   },
   package: {
     individually: true,

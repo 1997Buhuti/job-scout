@@ -9,12 +9,12 @@
 ## Backend setup
 
 - [x] **B1.** Add S3 CV bucket resource to Serverless Framework v3 config (`us-east-1`, block public access, SSE, CORS for PUT). Export bucket name as `CV_BUCKET_NAME`.
-- [ ] **B2.** Ensure DynamoDB users table (or resource) exists for `UserProfile` per `specs/02-database-schema.md`; export `USERS_TABLE_NAME`.
+- [x] **B2.** Ensure DynamoDB users table (or resource) exists for `UserProfile` per `specs/02-database-schema.md`; export `USERS_TABLE_NAME`.
 - [x] **B3.** Add AWS SDK v3 deps: `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner`, DynamoDB document client packages as needed. Do not add `aws-sdk` v2.
 - [x] **B4.** Implement `getPresignedUrl` Lambda (`POST /cv/presign`): Cognito auth, validate `application/pdf`, key `cvs/{userId}/{timestamp}.pdf`, return `{ uploadUrl, key, expiresIn }`.
 - [x] **B5.** Wire `getPresignedUrl` into Serverless functions + Cognito authorizer; grant `s3:PutObject` on the CV bucket.
-- [ ] **B6.** Implement `parseCvPdf` Lambda (`POST /cv/parse`): authorize `cvs/{userId}/` prefix, `GetObject`, extract PDF text, update `UserProfile.cvS3Key`, return `{ key, text, charCount }`.
-- [ ] **B7.** Wire `parseCvPdf` into Serverless; grant `s3:GetObject` + DynamoDB `UpdateItem` on users table.
+- [x] **B6.** Implement `parseCvPdf` Lambda (`POST /cv/parse`): authorize `cvs/{userId}/` prefix, `GetObject`, extract PDF text, update `UserProfile.cvS3Key`, return `{ key, text, charCount }`.
+- [x] **B7.** Wire `parseCvPdf` into Serverless; grant `s3:GetObject` + DynamoDB `UpdateItem` on users table.
 - [ ] **B8.** Smoke-test both endpoints locally or against `dev` stage with a small text PDF (presign → PUT → parse → verify `cvS3Key`).
 
 ---

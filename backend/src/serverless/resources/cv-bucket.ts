@@ -62,6 +62,25 @@ export const getCvBucketResources = (): AWS['resources'] => ({
         },
       },
     },
+    UsersTable: {
+      Type: 'AWS::DynamoDB::Table',
+      Properties: {
+        TableName: 'job-scout-${sls:stage}-users',
+        AttributeDefinitions: [
+          {
+            AttributeName: 'userId',
+            AttributeType: 'S',
+          },
+        ],
+        KeySchema: [
+          {
+            AttributeName: 'userId',
+            KeyType: 'HASH',
+          },
+        ],
+        BillingMode: 'PAY_PER_REQUEST',
+      },
+    },
   },
   Outputs: {
     CvBucketName: {
@@ -69,6 +88,13 @@ export const getCvBucketResources = (): AWS['resources'] => ({
       Value: { Ref: 'CvBucket' },
       Export: {
         Name: 'job-scout-${sls:stage}-CvBucketName',
+      },
+    },
+    UsersTableName: {
+      Description: 'DynamoDB users table name (UserProfile)',
+      Value: { Ref: 'UsersTable' },
+      Export: {
+        Name: 'job-scout-${sls:stage}-UsersTableName',
       },
     },
   },
