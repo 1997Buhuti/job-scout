@@ -1,7 +1,9 @@
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DynamoDBClient, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
+import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 
-import { BadRequestError, ForbiddenError, UnAuthorizedError } from '@common/ErrorTypes';
+import { BadRequestError, ForbiddenError } from '@common/ErrorTypes';
+import { resolveCallerId } from '@modules/cvModule/getPresignedUrl/resolveCallerId';
 
 import type { ParseCvRequest, ParseCvResult } from './types';
 
@@ -44,7 +46,6 @@ const toBuffer = async (body: unknown): Promise<Buffer> => {
     const reader = stream.getReader();
     const chunks: Buffer[] = [];
 
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -57,7 +58,7 @@ const toBuffer = async (body: unknown): Promise<Buffer> => {
   throw new BadRequestError('Unsupported PDF response body format');
 };
 
-export const parseCvPdf = async ({ event }: { event: any }): Promise<ParseCvResult> => {
+export const parseCvPdf = async ({ event }: { event: APIGatewayProxyEventV2 }): Promise<ParseCvResult> => {
   const bucketName = process.env[CV_BUCKET_NAME_ENV_KEY];
   const usersTableName = process.env[USERS_TABLE_NAME_ENV_KEY];
 
@@ -69,12 +70,7 @@ export const parseCvPdf = async ({ event }: { event: any }): Promise<ParseCvResu
     throw new Error(`Missing required environment variable ${USERS_TABLE_NAME_ENV_KEY}`);
   }
 
-  const requestContext = event?.requestContext;
-  const userId = requestContext?.authorizer?.jwt?.claims?.sub;
-
-  if (!userId) {
-    throw new UnAuthorizedError('Missing authenticated Cognito identity');
-  }
+  const userId = resolveCallerId(event);
 
   let body: unknown;
   try {

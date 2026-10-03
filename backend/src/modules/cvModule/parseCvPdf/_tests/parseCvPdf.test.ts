@@ -1,5 +1,4 @@
-import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { UpdateItemCommand, DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 
 import { parseCvPdf } from '@modules/cvModule/parseCvPdf/parseCvPdf';
 
@@ -15,6 +14,12 @@ jest.mock('@aws-sdk/client-dynamodb', () => ({
   DynamoDBClient: jest.fn().mockImplementation(() => ({ send: updateItemMock })),
   UpdateItemCommand: jest.fn().mockImplementation((input) => input),
 }));
+
+const buildEvent = (sub: string, key: string): APIGatewayProxyEventV2 =>
+  ({
+    requestContext: { authorizer: { jwt: { claims: { sub } } } },
+    body: JSON.stringify({ key }),
+  }) as unknown as APIGatewayProxyEventV2;
 
 describe('parseCvPdf', () => {
   const originalBucket = process.env.CV_BUCKET_NAME;
@@ -42,14 +47,7 @@ describe('parseCvPdf', () => {
   });
 
   it('rejects keys outside the authenticated user prefix', async () => {
-    await expect(
-      parseCvPdf({
-        event: {
-          requestContext: { authorizer: { jwt: { claims: { sub: 'user-123' } } } },
-          body: JSON.stringify({ key: 'cvs/other-user/abc.pdf' }),
-        } as any,
-      }),
-    ).rejects.toThrow('must start with');
+    await expect(parseCvPdf({ event: buildEvent('user-123', 'cvs/other-user/abc.pdf') })).rejects.toThrow('must start with');
 
     expect(getObjectMock).not.toHaveBeenCalled();
   });
@@ -60,12 +58,7 @@ describe('parseCvPdf', () => {
     });
     updateItemMock.mockResolvedValue({});
 
-    const result = await parseCvPdf({
-      event: {
-        requestContext: { authorizer: { jwt: { claims: { sub: 'user-123' } } } },
-        body: JSON.stringify({ key: 'cvs/user-123/1712345678901.pdf' }),
-      } as any,
-    });
+    const result = await parseCvPdf({ event: buildEvent('user-123', 'cvs/user-123/1712345678901.pdf') });
 
     expect(result).toEqual({
       key: 'cvs/user-123/1712345678901.pdf',
