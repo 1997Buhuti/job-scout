@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useRef, ChangeEvent, DragEvent } from 'react';
+import { useCallback, useState } from 'react';
 
-interface ResumeFile {
-  name: string;
-  size: string;
-  parsed: boolean;
-}
+import { useUserProfile } from '@/features/profile/context/UserProfileContext';
+import { uploadAndParseCv } from '@/lib/api/cvService';
+
+import { CvUploadDropzone, type CvUploadResult } from './CvUploadDropzone';
 
 const initialSkills = [
   { name: 'TypeScript', highlighted: true },
@@ -26,51 +25,20 @@ const initialSkills = [
 ];
 
 export function CvUploadCard() {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<ResumeFile | null>({
-    name: 'Software_Engineer_CV_2025.pdf',
-    size: '2.4 MB',
-    parsed: true,
-  });
+  const { refresh } = useUserProfile();
   const [skills, setSkills] = useState(initialSkills);
   const [newSkillInput, setNewSkillInput] = useState('');
   const [isAddingSkill, setIsAddingSkill] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selected = e.target.files[0];
-      const sizeMb = (selected.size / (1024 * 1024)).toFixed(1);
-      setFile({
-        name: selected.name,
-        size: `${sizeMb} MB`,
-        parsed: true,
-      });
-    }
-  };
-
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const selected = e.dataTransfer.files[0];
-      const sizeMb = (selected.size / (1024 * 1024)).toFixed(1);
-      setFile({
-        name: selected.name,
-        size: `${sizeMb} MB`,
-        parsed: true,
-      });
-    }
-  };
+  const handleUpload = useCallback(
+    async (file: File): Promise<CvUploadResult> => {
+      // POST /cv/presign → PUT to S3 → POST /cv/parse (persists cvS3Key).
+      const result = await uploadAndParseCv(file);
+      await refresh(true);
+      return { charCount: result.charCount };
+    },
+    [refresh],
+  );
 
   const handleAddSkill = () => {
     if (newSkillInput.trim()) {
@@ -101,85 +69,8 @@ export function CvUploadCard() {
         </span>
       </div>
 
-      {/* Hidden File Input */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept=".pdf,.doc,.docx"
-        className="hidden"
-      />
-
       {/* Dropzone */}
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={`mb-4 flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition-colors cursor-pointer ${
-          isDragging
-            ? 'border-secondary bg-surface-container/80'
-            : 'border-outline-variant/40 bg-surface-container/40 hover:border-secondary'
-        }`}
-      >
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant">
-          <span className="material-symbols-outlined text-[24px]">
-            upload_file
-          </span>
-        </div>
-        <div className="mb-1 text-base font-medium text-on-surface">
-          Drag & drop your updated resume here
-        </div>
-        <div className="mb-4 text-xs text-outline">
-          Supports PDF up to 25MB. Automatically parsed via AWS Textract & Claude 3.5.
-        </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            fileInputRef.current?.click();
-          }}
-          className="rounded-lg bg-surface-container-high px-4 py-2 text-xs font-medium text-on-surface hover:bg-surface-bright transition-colors"
-        >
-          Browse Files
-        </button>
-      </div>
-
-      {/* Uploaded File Details */}
-      {file && (
-        <div className="flex items-center gap-3 rounded-xl bg-surface-container p-3 sm:p-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-error-container/30 text-error">
-            <span className="material-symbols-outlined text-[20px]">
-              picture_as_pdf
-            </span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium text-on-surface">
-              {file.name}
-            </div>
-            <div className="flex items-center gap-2 text-xs text-outline">
-              <span>{file.size}</span>
-              <span>•</span>
-              <span className="flex items-center gap-1 text-secondary">
-                <span className="material-symbols-outlined text-[14px]">
-                  verified
-                </span>
-                Parsed
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setFile(null)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-error-container/30 hover:text-error transition-colors"
-            title="Remove uploaded CV"
-          >
-            <span className="material-symbols-outlined text-[18px]">
-              delete
-            </span>
-          </button>
-        </div>
-      )}
+      <CvUploadDropzone onUpload={handleUpload} />
 
       {/* Parsed Skills Matrix */}
       <div className="mt-6 border-t border-surface-container pt-4">

@@ -21,8 +21,8 @@
 
 ## Frontend UI integration
 
-- [ ] **F1.** Configure Amplify Gen 2 / env with API base URL (`NEXT_PUBLIC_API_URL`) and Cognito so the client can attach ID tokens.
-- [ ] **F2.** Add `CvUploadDropzone` component (PDF-only, size cap e.g. 5 MB, loading/error/success states).
+- [x] **F1.** Configure Amplify Gen 2 / env with API base URL (`NEXT_PUBLIC_API_URL`) and Cognito so the client can attach ID tokens.
+- [x] **F2.** Add `CvUploadDropzone` component (PDF-only, size cap e.g. 5 MB, loading/error/success states).
 - [ ] **F3.** Implement client flow: authenticated `POST /cv/presign` → `PUT` to `uploadUrl` with `Content-Type: application/pdf` → `POST /cv/parse` with `{ key }`.
 - [ ] **F4.** Mount dropzone on the profile (or settings) page; show parse success feedback (e.g. character count).
 - [ ] **F5.** End-to-end UI test: signed-in user uploads a PDF and sees success; signed-out / non-PDF paths fail clearly.

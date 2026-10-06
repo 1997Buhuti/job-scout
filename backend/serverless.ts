@@ -74,8 +74,13 @@ const serverlessConfiguration: AWS = {
           {
             Effect: 'Allow',
             Action: ['s3:PutObject'],
+            // Object ARN (`bucket/*`) — PutObject is object-level; a bare
+            // bucket ARN makes every browser PUT via the presigned URL 403.
             Resource: {
-              'Fn::GetAtt': ['CvBucket', 'Arn'],
+              'Fn::Join': [
+                '',
+                [{ 'Fn::GetAtt': ['CvBucket', 'Arn'] }, '/*'],
+              ],
             },
           },
           {

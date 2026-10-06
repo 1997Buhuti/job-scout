@@ -8,7 +8,14 @@ import { CV_BUCKET_NAME_ENV_KEY, CV_PRESIGN_EXPIRES_IN_SECONDS } from './constan
 import { PresignCvUpload, PresignCvUploadParams } from './types';
 import { validateCvContentType } from './validateCvContentType';
 
-const s3Client = new S3Client({});
+/**
+ * SDK v3.729+ signs CRC32 checksum headers into PutObject by default. A
+ * browser PUT only sends `Content-Type`, so those extra signed headers make
+ * S3 reject the upload with 403. Disable automatic checksums for presigns.
+ */
+const s3Client = new S3Client({
+  requestChecksumCalculation: 'WHEN_REQUIRED',
+});
 
 const resolveBucketName = (): string => {
   const bucketName = process.env[CV_BUCKET_NAME_ENV_KEY];
