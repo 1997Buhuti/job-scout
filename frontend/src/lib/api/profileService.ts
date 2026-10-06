@@ -1,8 +1,6 @@
 import { fetchAuthSession, fetchUserAttributes, getCurrentUser } from 'aws-amplify/auth';
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.trim() ||
-  'https://iyzfrsxuh6.execute-api.us-east-1.amazonaws.com';
+import { getApiBaseUrl } from './config';
 
 export interface UserProfileData {
   userId: string;
@@ -49,7 +47,7 @@ export async function getProfile(): Promise<UserProfileData | null> {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const res = await fetch(`${API_BASE_URL}/me/profile`, {
+    const res = await fetch(`${getApiBaseUrl()}/me/profile`, {
       method: 'GET',
       headers,
     });
@@ -82,7 +80,7 @@ export async function updateProfile(
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const res = await fetch(`${API_BASE_URL}/me/profile`, {
+    const res = await fetch(`${getApiBaseUrl()}/me/profile`, {
       method: 'PUT',
       headers,
       body: JSON.stringify(payload),

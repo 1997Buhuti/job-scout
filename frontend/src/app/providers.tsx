@@ -12,10 +12,10 @@ if (config) {
   Amplify.configure(config, { ssr: true });
 } else if (process.env.NODE_ENV === 'development') {
   console.warn(
-    '[Job Scout] Amplify Auth is not configured. After `npm run amplify:sandbox`, copy ' +
-      'auth.user_pool_id and auth.user_pool_client_id from amplify_outputs.json into ' +
-      'frontend/.env.local as NEXT_PUBLIC_COGNITO_USER_POOL_ID and ' +
-      'NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID (see .env.example).',
+    '[Job Scout] Amplify Auth is not configured. Run `npx ampx sandbox` to ' +
+      'generate amplify_outputs.json, or set ' +
+      'NEXT_PUBLIC_COGNITO_USER_POOL_ID and NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID ' +
+      'in frontend/.env.local (see .env.example).',
   );
 }
 

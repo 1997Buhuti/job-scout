@@ -58,6 +58,15 @@ describe('presignCvUpload', () => {
     expect(CV_PRESIGN_EXPIRES_IN_SECONDS).toBeLessThanOrEqual(300);
   });
 
+  it('presigns with an S3 client that disables default CRC32 checksums', async () => {
+    await presignCvUpload({ userId: 'sub-123' });
+
+    // Browser PUTs only send Content-Type; signed checksum query params → 403.
+    const client = getSignedUrlMock.mock.calls[0][0] as { config?: { requestChecksumCalculation?: () => Promise<string> } };
+    const checksumMode = await client.config?.requestChecksumCalculation?.();
+    expect(checksumMode).toBe('WHEN_REQUIRED');
+  });
+
   it('defaults to application/pdf when no content type is supplied', async () => {
     await presignCvUpload({ userId: 'sub-123' });
 
