@@ -81,8 +81,9 @@ describe('CvUploadDropzone', () => {
       expect(screen.getByText(/uploading cv\.pdf…/i)).toBeInTheDocument();
     });
 
-    if (resolveUpload) {
-      resolveUpload({ charCount: 7 });
+    const resolver = resolveUpload;
+    if (resolver) {
+      resolver({ charCount: 7 });
     }
     await waitFor(() => {
       expect(screen.getByText(/uploaded to s3/i)).toBeInTheDocument();
