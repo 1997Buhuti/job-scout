@@ -1,6 +1,7 @@
 import type { AWS } from '@serverless/typescript';
 
 import { testFunctions } from './src/functions/test';
+import { profileFunctions } from './src/modules/profileModule';
 import { getPresignedUrlFunctions } from './src/modules/cvModule/getPresignedUrl';
 import { parseCvPdfFunctions } from './src/modules/cvModule/parseCvPdf';
 import { getCustom } from './src/serverless/configs/serverless-common.config';
@@ -93,13 +94,13 @@ const serverlessConfiguration: AWS = {
               ],
             },
           },
-          {
-            Effect: 'Allow',
-            Action: ['dynamodb:UpdateItem'],
-            Resource: {
-              'Fn::GetAtt': ['UsersTable', 'Arn'],
-            },
-          },
+           {
+             Effect: 'Allow',
+             Action: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
+             Resource: {
+               'Fn::GetAtt': ['UsersTable', 'Arn'],
+             },
+           },
         ],
       },
     },
@@ -109,6 +110,7 @@ const serverlessConfiguration: AWS = {
     ...testFunctions,
     ...getPresignedUrlFunctions,
     ...parseCvPdfFunctions,
+    ...profileFunctions,
   },
   package: {
     individually: true,
