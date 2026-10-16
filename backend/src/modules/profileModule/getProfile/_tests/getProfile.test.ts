@@ -1,4 +1,4 @@
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 
 import { GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 
@@ -33,12 +33,15 @@ function mockSend(command: unknown) {
 jest.mocked(GetCommand);
 jest.mocked(PutCommand);
 
-const buildEvent = (sub: string, email: string): APIGatewayProxyEventV2 =>
+const buildEvent = (
+  sub: string,
+  email: string,
+): APIGatewayProxyEventV2WithJWTAuthorizer =>
   ({
     requestContext: {
       authorizer: { jwt: { claims: { sub, email } } },
     },
-  }) as unknown as APIGatewayProxyEventV2;
+  }) as unknown as APIGatewayProxyEventV2WithJWTAuthorizer;
 
 describe('getProfile', () => {
   const originalTable = process.env.USERS_TABLE_NAME;
@@ -134,7 +137,7 @@ describe('getProfile', () => {
   it('throws BadRequestError when sub claim is missing', async () => {
     const event = ({
       requestContext: { authorizer: { jwt: { claims: {} } } },
-    }) as unknown as APIGatewayProxyEventV2;
+    }) as unknown as APIGatewayProxyEventV2WithJWTAuthorizer;
 
     await expect(getProfile(event)).rejects.toThrow(BadRequestError);
   });

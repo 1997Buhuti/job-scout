@@ -1,4 +1,4 @@
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 
 import { GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
@@ -34,13 +34,16 @@ function mockSend(command: unknown) {
 jest.mocked(UpdateCommand);
 jest.mocked(GetCommand);
 
-const buildEvent = (sub: string, body?: object): APIGatewayProxyEventV2 =>
+const buildEvent = (
+  sub: string,
+  body?: object,
+): APIGatewayProxyEventV2WithJWTAuthorizer =>
   ({
     requestContext: {
       authorizer: { jwt: { claims: { sub, email: 'user@example.com' } } },
     },
     body: body ? JSON.stringify(body) : undefined,
-  }) as unknown as APIGatewayProxyEventV2;
+  }) as unknown as APIGatewayProxyEventV2WithJWTAuthorizer;
 
 describe('validateTargetRoles', () => {
   it('accepts valid roles', () => {
