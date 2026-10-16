@@ -66,13 +66,12 @@ describe('CvUploadDropzone', () => {
   });
 
   it('shows the uploading state while onUpload is in flight (F2 loading state)', async () => {
-    let resolveUpload: ((value: CvUploadResult) => void) | null = null;
-    const onUpload = jest.fn(
-      () =>
-        new Promise<CvUploadResult>((resolve) => {
-          resolveUpload = resolve;
-        }),
-    );
+    // Deferred promise so the test can assert the "uploading" state mid-flight.
+    const holder: { resolve?: (value: CvUploadResult) => void } = {};
+    const pending = new Promise<CvUploadResult>((resolve) => {
+      holder.resolve = resolve;
+    });
+    const onUpload = jest.fn(() => pending);
     const { container } = renderDropzone(onUpload);
 
     fireEvent.change(fileInput(container), { target: { files: [makeFile('cv.pdf', 2048)] } });
@@ -81,9 +80,9 @@ describe('CvUploadDropzone', () => {
       expect(screen.getByText(/uploading cv\.pdf…/i)).toBeInTheDocument();
     });
 
-    const resolver = resolveUpload;
-    if (resolver) {
-      resolver({ charCount: 7 });
+    // Resolve the deferred upload and confirm the success state appears.
+    if (holder.resolve) {
+      holder.resolve({ charCount: 7 });
     }
     await waitFor(() => {
       expect(screen.getByText(/uploaded to s3/i)).toBeInTheDocument();
