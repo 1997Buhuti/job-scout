@@ -4,7 +4,7 @@ import {
   GetCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 
 import { BadRequestError, DatabaseError } from '@common/ErrorTypes';
 
@@ -64,7 +64,7 @@ export const validateTargetRoles = (roles: unknown): string[] => {
 };
 
 export const updateProfile = async (
-  event: APIGatewayProxyEventV2,
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
 ): Promise<UserProfile> => {
   const { sub } = extractCallerClaims(event);
   const tableName = resolveUsersTable();

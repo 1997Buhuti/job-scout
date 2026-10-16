@@ -1,4 +1,7 @@
-import type { APIGatewayProxyEventV2, Context } from 'aws-lambda';
+import type {
+  APIGatewayProxyEventV2WithJWTAuthorizer,
+  Context,
+} from 'aws-lambda';
 
 import { apiResponse } from '@common/apiResponse';
 import { PROFILE_SERVICE } from '@common/constants';
@@ -9,7 +12,7 @@ import wrapper from '@common/middyWrapper';
 import { getProfile } from './getProfile';
 
 const getProfileEndpoint = async (
-  event: APIGatewayProxyEventV2,
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
   context: Context,
 ) => {
   const logger = new Logger(PROFILE_SERVICE, context.awsRequestId);
@@ -27,4 +30,6 @@ const getProfileEndpoint = async (
   }
 };
 
-export const main = wrapper<APIGatewayProxyEventV2>(getProfileEndpoint);
+export const main = wrapper<APIGatewayProxyEventV2WithJWTAuthorizer>(
+  getProfileEndpoint,
+);

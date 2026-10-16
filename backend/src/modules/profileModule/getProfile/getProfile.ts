@@ -4,7 +4,7 @@ import {
   GetCommand,
   PutCommand,
 } from '@aws-sdk/lib-dynamodb';
-import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 
 import { BadRequestError, DatabaseError } from '@common/ErrorTypes';
 
@@ -26,24 +26,18 @@ interface CallerClaims {
   email: string;
 }
 
-export const extractCallerClaims = (event: APIGatewayProxyEventV2): CallerClaims => {
-  const claims = (
-    event.requestContext as {
-      authorizer?: {
-        jwt?: {
-          claims?: Record<string, string>;
-        };
-      };
-    }
-  )?.authorizer?.jwt?.claims;
+export const extractCallerClaims = (
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+): CallerClaims => {
+  const claims = event.requestContext.authorizer?.jwt?.claims;
 
   const sub = claims?.sub;
-  if (!sub) {
+  if (typeof sub !== 'string' || !sub) {
     throw new BadRequestError('Missing Cognito sub claim in authorizer');
   }
 
   const email = claims?.email;
-  if (!email) {
+  if (typeof email !== 'string' || !email) {
     throw new BadRequestError('Missing email claim in authorizer');
   }
 
@@ -74,7 +68,7 @@ export const buildDefaultProfile = (
 });
 
 export const getProfile = async (
-  event: APIGatewayProxyEventV2,
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
 ): Promise<UserProfile> => {
   const { sub, email } = extractCallerClaims(event);
   const tableName = resolveUsersTable();
