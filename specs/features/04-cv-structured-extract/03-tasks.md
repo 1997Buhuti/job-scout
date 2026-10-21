@@ -1,7 +1,7 @@
-# Feature: CV Structured Extract — Tasks
+# Feature: CV Structured Extract ï¿½ Tasks
 
 **Feature slug:** `04-cv-structured-extract`  
-**Follow:** [01-spec.md](./01-spec.md) · [02-plan.md](./02-plan.md)  
+**Follow:** [01-spec.md](./01-spec.md) ï¿½ [02-plan.md](./02-plan.md)  
 **Protocol:** Execute **one** unchecked task at a time; wait for confirmation; then mark `[x]`.
 
 ---
@@ -10,15 +10,15 @@
 
 ### Phase 1: Core extraction logic
 
-- [ ] **B1.** Add `pdf-parse` dependency to `backend/package.json` if not already present (check existing deps first).
-- [ ] **B2.** Create `backend/src/modules/cvModule/parseCvPdf/types.ts`: Define TypeScript interfaces for `CvProfile`, `CvExperience`, `CvEducation` matching spec FR-2.
-- [ ] **B3.** Create `backend/src/modules/cvModule/parseCvPdf/patterns.ts`: Define regex patterns for section detection (skills, experience, education, summary).
-- [ ] **B4.** Create `backend/src/modules/cvModule/parseCvPdf/skillDictionary.ts`: Implement curated skill dictionary with ~200 common tech/soft skills (canonical form + variations). Include: JavaScript/TypeScript/Python/AWS/React/Node.js/Docker/K8s and Sri Lankan job market relevant skills.
-- [ ] **B5.** Create `backend/src/modules/cvModule/parseCvPdf/structureExtraction.ts`: Implement `extractSkills()` function with dictionary matching, normalization, deduplication, capping at 40 skills/48 chars each.
-- [ ] **B6.** Enhance `structureExtraction.ts`: Implement `extractExperience()` function with date pattern matching, company/title extraction, capping at 15 entries.
-- [ ] **B7.** Enhance `structureExtraction.ts`: Implement `extractEducation()` function with degree pattern matching, institution extraction, capping at 10 entries.
-- [ ] **B8.** Enhance `structureExtraction.ts`: Implement `extractNameAndSummary()` function, cap summary at 500 chars.
-- [ ] **B9.** Create main `structureCvProfile(text: string): CvProfile` orchestrator function that calls all extraction functions and assembles `CvProfile` JSON with `extractedAt` and `sourceCvS3Key`.
+- [x] **B1.** Add `pdf-parse` dependency to `backend/package.json` if not already present (check existing deps first).
+- [x] **B2.** Create `backend/src/modules/cvModule/parseCvPdf/types.ts`: Define TypeScript interfaces for `CvProfile`, `CvExperience`, `CvEducation` matching spec FR-2.
+- [x] **B3.** Create `backend/src/modules/cvModule/parseCvPdf/patterns.ts`: Define regex patterns for section detection (skills, experience, education, summary).
+- [x] **B4.** Create `backend/src/modules/cvModule/parseCvPdf/skillDictionary.ts`: Implement curated skill dictionary with ~200 common tech/soft skills (canonical form + variations). Include: JavaScript/TypeScript/Python/AWS/React/Node.js/Docker/K8s and Sri Lankan job market relevant skills.
+- [x] **B5.** Create `backend/src/modules/cvModule/parseCvPdf/structureExtraction.ts`: Implement `extractSkills()` function with dictionary matching, normalization, deduplication, capping at 40 skills/48 chars each.
+- [x] **B6.** Enhance `structureExtraction.ts`: Implement `extractExperience()` function with date pattern matching, company/title extraction, capping at 15 entries.
+- [x] **B7.** Enhance `structureExtraction.ts`: Implement `extractEducation()` function with degree pattern matching, institution extraction, capping at 10 entries.
+- [x] **B8.** Enhance `structureExtraction.ts`: Implement `extractNameAndSummary()` function, cap summary at 500 chars.
+- [x] **B9.** Create main `structureCvProfile(text: string): CvProfile` orchestrator function that calls all extraction functions and assembles `CvProfile` JSON with `extractedAt` and `sourceCvS3Key`.
 
 ### Phase 2: Lambda integration
 
