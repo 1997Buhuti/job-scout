@@ -56,9 +56,9 @@ export const DEGREE_PATTERNS = {
  */
 export const COMPANY_PATTERNS = {
   /** Company after title on same line */
-  ON_SAME_LINE: /(?:at|at\s+the\s+company|for)\s+([A-Z][A-Za-z0-9\s&',.]+?)(?=\s*(?:,|\s+–|\s+-|\s+at|\n|$))/i,
+  ON_SAME_LINE: /(?:at|at\s+the\s+company|for)\s+([A-Z][A-Za-z0-9\s&',.]+?)(?=\s*(?:,|\s+–|\s+-\s+at|\n|$))/i,
   /** Company on next line after title */
-  ON_NEXT_LINE: /(?:^|\n)\s*[^@\s\n]+(?:\s+[^@\s\n]+)*\s*(?:\n)([A-Z][A-Za-z0-9\s&',.]+?)(?=\s*(?:,|\.|\s+–|\s+-|\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)|\s+(?:0[1-9]|1[0-2])\/|\s+(?:19|20)\d{2}|\n|$))/i,
+  ON_NEXT_LINE: /(?:^|\n)\s*[^@\s\n]+(?:\s+[^@\s\n]+)*\s*(?:\n)([A-Z][A-Za-z0-9\s&',.]+?)(?=\s*(?:,|\.|\s+–|\s+-\s+(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)|\s+(?:0[1-9]|1[0-2])\/|\s+(?:19|20)\d{2}|\n|$))/i,
 };
 
 /**
@@ -80,7 +80,7 @@ export const NAME_PATTERNS = {
   /** Name with email below */
   WITH_EMAIL: /([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}).*?[@\w.-]+\.\w+/si,
   /** Name in contact section */
-  CONTACT_SECTION: /(?:Name|Full Name|Fullname)\s*[:\-]?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/i,
+  CONTACT_SECTION: /(?:Name|Full Name|Fullname)\s*[:-]?\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/i,
 };
 
 /**
@@ -100,7 +100,7 @@ export const EXPERIENCE_ENTRY_PATTERNS = {
   /** Single experience entry with title, company, period */
   MAIN: /([\s\S]*?)(?=(?:^|\n)\s*(?:Experience|Work History|Employment|Professional Experience)|$)/is,
   /** Bullet points within experience */
-  BULLET: /^\s*[•\-\*]\s+(.+)$/gm,
+  BULLET: /^\s*[•*]\s+(.+)$/gm,
   /** Summary line after title/company */
   SUMMARY_LINE: /(?:^|\n)\s*[-–—]\s*(.+?)(?=\n\n|\n\s*(?:[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*|$))/s,
 };
@@ -110,11 +110,11 @@ export const EXPERIENCE_ENTRY_PATTERNS = {
  */
 export const SKILL_PATTERNS = {
   /** Skills listed as comma-separated */
-  COMMA_SEPARATED: /(?:^|\n)\s*Skills?\s*[:\-]?\s*([\s\S]*?)(?=\n\s*\n|\n\s*(?:Experience|Education|Projects|Certifications|$))/is,
+  COMMA_SEPARATED: /(?:^|\n)\s*Skills?\s*[:-]?\s*([\s\S]*?)(?=\n\s*\n|\n\s*(?:Experience|Education|Projects|Certifications|$))/is,
   /** Skills listed as bullet points */
-  BULLET_POINTS: /(?:^|\n)\s*Skills?\s*[:\-]?(?:\n\s*[•\-\*]\s+.+)+/is,
+  BULLET_POINTS: /(?:^|\n)\s*Skills?\s*[:-]?(?:\n\s*[•*]\s+.+)+/is,
   /** Individual skill in a list */
-  INDIVIDUAL: /^\s*[•\-\*]?\s*([A-Za-z][A-Za-z0-9+#&.]+(?:\s+[A-Za-z][A-Za-z0-9+#&.]*)?)/m,
+  INDIVIDUAL: /^\s*[•*]?\s*([A-Za-z][A-Za-z0-9+#&.]+(?:\s+[A-Za-z][A-Za-z0-9+#&.]*)?)/m,
   /** Inline skill mention */
   INLINE: /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)(?:\s+and|\s*,\s*|\s+or\s+)/g,
 };

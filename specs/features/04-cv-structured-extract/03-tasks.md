@@ -22,11 +22,11 @@
 
 ### Phase 2: Lambda integration
 
-- [ ] **B10.** Update `backend/src/modules/cvModule/parseCvPdf/handler.ts`: After PDF text extraction, call `structureCvProfile(text)` to get `cvProfile`.
-- [ ] **B11.** Update handler: Add DynamoDB `UpdateItem` call to persist `cvProfile` attribute on `UserProfile` table along with `cvS3Key` and `updatedAt`.
-- [ ] **B12.** Update handler response: Include `cvProfile` in the 200 response `{ key, text, charCount, cvProfile }`.
-- [ ] **B13.** Add error handling: Wrap extraction in try-catch; on failure, log error and return previous `cvProfile` if exists, else return response without `cvProfile` (do not fail the upload).
-- [ ] **B14.** Add input validation: Truncate CV text to max 50,000 chars before extraction; reject empty text with 422.
+- [x] **B10.** Update `backend/src/modules/cvModule/parseCvPdf/handler.ts`: After PDF text extraction, call `structureCvProfile(text)` to get `cvProfile`.
+- [x] **B11.** Update handler: Add DynamoDB `UpdateItem` call to persist `cvProfile` attribute on `UserProfile` table along with `cvS3Key` and `updatedAt`.
+- [x] **B12.** Update handler response: Include `cvProfile` in the 200 response `{ key, text, charCount, cvProfile }`.
+- [x] **B13.** Add error handling: Wrap extraction in try-catch; on failure, log error and return previous `cvProfile` if exists, else return response without `cvProfile` (do not fail the upload).
+- [x] **B14.** Add input validation: Truncate CV text to max 50,000 chars before extraction; reject empty text with 422.
 
 ### Phase 3: Testing
 

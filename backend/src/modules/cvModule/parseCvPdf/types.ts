@@ -1,5 +1,3 @@
-import type { APIGatewayProxyResultV2 } from 'aws-lambda';
-
 /** Request body for `POST /cv/parse`. */
 export interface ParseCvRequest {
   key: string;

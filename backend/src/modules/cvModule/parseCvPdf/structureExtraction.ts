@@ -1,6 +1,6 @@
 import type { CvProfile, CvExperience, CvEducation } from './types';
-import { SKILL_DICTIONARY, VARIATION_TO_CANONICAL } from './skillDictionary';
-import { SECTION_HEADERS, DATE_PATTERNS, DEGREE_PATTERNS, TITLE_PATTERNS, NAME_PATTERNS, SUMMARY_PATTERNS, EXPERIENCE_ENTRY_PATTERNS, SKILL_PATTERNS } from './patterns';
+import { SKILL_DICTIONARY } from './skillDictionary';
+import { SECTION_HEADERS, NAME_PATTERNS, SUMMARY_PATTERNS } from './patterns';
 
 /**
  * Max caps for extracted data
@@ -37,7 +37,7 @@ export function extractSkills(text: string): string[] {
     );
 
     // Match individual skills (comma-separated or bullet points)
-    const skillMatches = skillsSectionContent.match(/(?:^|\n|,|•|\-)\s*([A-Za-z][A-Za-z0-9+#&.\s-]{0,47})/gm);
+    const skillMatches = skillsSectionContent.match(/(?:^|\n|,|•|-)\s*([A-Za-z][A-Za-z0-9+#&.\s-]{0,47})/gm);
     if (skillMatches) {
       skillMatches.forEach((match) => {
         const skill = match.trim().replace(/^•\s*|-?\s*/, '').replace(/,$/, '').trim();
@@ -88,7 +88,7 @@ export function extractSkills(text: string): string[] {
  */
 export function extractExperience(text: string): CvExperience[] {
   const experiences: CvExperience[] = [];
-  const textLines = text.split('\n');
+  const _textLines = text.split('\n');
 
   // Find Experience section
   const experienceMatch = text.match(SECTION_HEADERS.EXPERIENCE);
@@ -175,7 +175,7 @@ function extractExperienceFromText(text: string): CvExperience[] {
   const lines = text.split('\n');
 
   // Look for patterns like "Job Title at Company" or "Company - Job Title"
-  const experiencePattern = /(.+?(?:Engineer|Developer|Programmer|Architect|Analyst|Consultant|Manager|Director|Lead|Specialist|Officer|Administrator|Coordinator))\s*(?:at|for|–|-|—)\s*(.+)/i;
+  const experiencePattern = /(.+?(?:Engineer|Developer|Programmer|Architect|Analyst|Consultant|Manager|Director|Lead|Specialist|Officer|Administrator|Coordinator))\s*(?:at|for|–|—)\s*(.+)/i;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -214,7 +214,7 @@ function extractExperienceFromText(text: string): CvExperience[] {
  */
 export function extractEducation(text: string): CvEducation[] {
   const education: CvEducation[] = [];
-  const textLines = text.split('\n');
+  const _textLines = text.split('\n');
 
   // Find Education section
   const educationMatch = text.match(SECTION_HEADERS.EDUCATION);
@@ -441,7 +441,7 @@ function extractCompany(line: string): string | null {
   }
 
   // Look for standalone company name (all caps or PascalCase)
-  const companyPattern = /\b([A-Z][A-Za-z0-9\s&',.]+?)(?=\s*(?:Engineer|Developer|Programmer|Architect|Analyst|Consultant|Manager|Director|VP|at|for|-|,|\.|$))/i;
+  const companyPattern = /\b([A-Z][A-Za-z0-9\s&',.]+?)(?=\s*(?:Engineer|Developer|Programmer|Architect|Analyst|Consultant|Manager|Director|VP|at|for|,|\.|$))/i;
   const companyMatch = line.match(companyPattern);
   if (companyMatch) {
     const candidate = companyMatch[1].trim();
@@ -501,7 +501,7 @@ function extractExperienceSummary(line: string): string | null {
   if (line.match(/\b\d{4}\s*[-–—]\s*(?:\d{4}|Present)\b/i)) return null;
 
   // This looks like a summary/description line
-  const summary = line.replace(/^[•\-\*]\s*/, '').trim();
+  const summary = line.replace(/^[•*]\s*/, '').trim();
   return summary.length > 0 ? summary : null;
 }
 
