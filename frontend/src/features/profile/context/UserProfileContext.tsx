@@ -68,7 +68,42 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    let mounted = true;
+
+    const loadUser = async () => {
+      // Skip network if we already loaded this session (unless forced).
+      if (hasFetched) {
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const detail = await getLoggedInUserDetail();
+        if (mounted) {
+          setUser(detail);
+          setHasFetched(true);
+        }
+      } catch (err) {
+        console.error('[UserProfile] failed to load:', err);
+        if (mounted) {
+          setError(err instanceof Error ? err.message : 'Failed to load profile');
+          setUser(null);
+          setHasFetched(true);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadUser();
+
+    return () => {
+      mounted = false;
+    };
     // Initial load only — later callers use refresh(true) or clear().
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount once
   }, []);

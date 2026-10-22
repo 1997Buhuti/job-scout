@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { confirmSignUp, resendSignUpCode, signUp } from 'aws-amplify/auth';
 
 function fieldClassName() {
@@ -20,8 +20,9 @@ export function SignUpForm() {
   const searchParams = useSearchParams();
   const confirmEmailParam = searchParams.get('confirm');
 
+  // Initialize state based on URL parameter - we initialize directly in useState
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(confirmEmailParam || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [targetRole, setTargetRole] = useState<string>(ROLE_OPTIONS[0]);
@@ -31,13 +32,6 @@ export function SignUpForm() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-
-  useEffect(() => {
-    if (confirmEmailParam) {
-      setEmail(confirmEmailParam);
-      setNeedsConfirm(true);
-    }
-  }, [confirmEmailParam]);
 
   async function onSignUp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

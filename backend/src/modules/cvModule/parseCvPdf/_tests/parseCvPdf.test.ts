@@ -60,11 +60,22 @@ describe('parseCvPdf', () => {
 
     const result = await parseCvPdf({ event: buildEvent('user-123', 'cvs/user-123/1712345678901.pdf') });
 
-    expect(result).toEqual({
+    // The result should include a cvProfile with empty arrays since "Hello world" doesn't contain structured data
+    expect(result).toMatchObject({
       key: 'cvs/user-123/1712345678901.pdf',
       text: 'Hello world',
       charCount: 11,
     });
+    
+    // Check that cvProfile exists with empty arrays
+    expect(result.cvProfile).toBeDefined();
+    expect(result.cvProfile?.skills).toEqual([]);
+    expect(result.cvProfile?.experience).toEqual([]);
+    expect(result.cvProfile?.education).toEqual([]);
+    expect(result.cvProfile?.sourceCvS3Key).toBe('cvs/user-123/1712345678901.pdf');
+    expect(result.cvProfile?.extractedAt).toBeDefined();
+    expect(result.cvProfile?.fullName).toBeUndefined();
+    expect(result.cvProfile?.summary).toBeUndefined();
 
     expect(getObjectMock).toHaveBeenCalledTimes(1);
     expect(getObjectMock.mock.calls[0][0]).toMatchObject({
