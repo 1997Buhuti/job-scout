@@ -43,6 +43,9 @@ amplify_outputs.json.bak
 # vercel
 .vercel
 
+# pdf.js worker copied from node_modules by scripts/copy-pdf-worker.mjs
+/public/pdf.worker.mjs
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

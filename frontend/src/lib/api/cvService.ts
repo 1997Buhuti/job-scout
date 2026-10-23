@@ -1,3 +1,5 @@
+import type { CvProfile } from '@/features/cv/types/cvProfile';
+
 import { getApiBaseUrl } from './config';
 import { getIdToken } from './profileService';
 
@@ -6,13 +8,6 @@ export interface PresignedCvUpload {
   uploadUrl: string;
   key: string;
   expiresIn: number;
-}
-
-/** Response of `POST /cv/parse` (unwrapped from the `{ data }` envelope). */
-export interface ParsedCvResult {
-  key: string;
-  text: string;
-  charCount: number;
 }
 
 /** Only PDF uploads are accepted; the value is signed into the presigned URL. */
@@ -89,12 +84,17 @@ export async function uploadCvToS3(uploadUrl: string, file: File): Promise<void>
 }
 
 /**
- * Step 3: parse the uploaded object and persist `UserProfile.cvS3Key`.
+ * Step 3: persist the uploaded CV on the user's profile. The PDF text was
+ * already extracted and structured in the browser, so the API receives the
+ * S3 `key` plus the optional `cvProfile`. When `cvProfile` is omitted (the
+ * browser could not read the PDF) only `cvS3Key` is updated and any previous
+ * `cvProfile` is kept. The API validates the profile, stores it and answers
+ * `204 No Content`; a failure to save rejects.
  */
-export async function parseCvPdf(key: string): Promise<ParsedCvResult> {
+export async function saveParsedCv(key: string, cvProfile?: CvProfile): Promise<void> {
   const token = await getIdToken();
   if (!token) {
-    throw new Error('You must be signed in to parse a CV.');
+    throw new Error('You must be signed in to save a CV.');
   }
 
   const res = await fetch(`${getApiBaseUrl()}/cv/parse`, {
@@ -103,26 +103,10 @@ export async function parseCvPdf(key: string): Promise<ParsedCvResult> {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ key }),
+    body: JSON.stringify(cvProfile ? { key, cvProfile } : { key }),
   });
 
   if (!res.ok) {
-    throw await toApiError(res, 'Could not parse the uploaded CV');
+    throw await toApiError(res, 'Could not save the uploaded CV');
   }
-
-  const body = (await res.json()) as { data?: ParsedCvResult };
-  if (!body?.data) {
-    throw new Error('Unexpected response from the parse endpoint');
-  }
-  return body.data;
-}
-
-/**
- * Full client flow: presign → PUT to S3 → parse. Returns the parse result so
- * the UI can surface the extracted character count.
- */
-export async function uploadAndParseCv(file: File): Promise<ParsedCvResult> {
-  const { uploadUrl, key } = await requestCvPresign();
-  await uploadCvToS3(uploadUrl, file);
-  return parseCvPdf(key);
 }

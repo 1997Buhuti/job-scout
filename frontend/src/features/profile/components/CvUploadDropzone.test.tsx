@@ -22,7 +22,7 @@ const makeFile = (
   return new File([blob], name, { type, lastModified: Date.now() });
 };
 
-const renderDropzone = (onUpload = jest.fn().mockResolvedValue({ charCount: 42 })) => {
+const renderDropzone = (onUpload = jest.fn().mockResolvedValue({ skillsCount: 12 })) => {
   return render(<CvUploadDropzone onUpload={onUpload} />);
 };
 
@@ -82,7 +82,7 @@ describe('CvUploadDropzone', () => {
 
     // Resolve the deferred upload and confirm the success state appears.
     if (holder.resolve) {
-      holder.resolve({ charCount: 7 });
+      holder.resolve({ skillsCount: 7 });
     }
     await waitFor(() => {
       expect(screen.getByText(/uploaded to s3/i)).toBeInTheDocument();
@@ -90,7 +90,7 @@ describe('CvUploadDropzone', () => {
     expect(onUpload).toHaveBeenCalledTimes(1);
   });
 
-  it('shows success with the parsed character count after a successful upload (AC-3/AC-4, F2/F4)', async () => {
+  it('shows the number of extracted skills after a successful upload (AC-3/AC-4, F2/F4)', async () => {
     const { container } = renderDropzone();
 
     fireEvent.change(fileInput(container), { target: { files: [makeFile('cv.pdf', 2048)] } });
@@ -98,7 +98,20 @@ describe('CvUploadDropzone', () => {
     await waitFor(() => {
       expect(screen.getByText(/uploaded to s3/i)).toBeInTheDocument();
     });
-    expect(screen.getByText(/parsed — 42 characters/i)).toBeInTheDocument();
+    expect(screen.getByText(/extracted 12 skills from your cv/i)).toBeInTheDocument();
+  });
+
+  it('tells the user when the CV text could not be read but the upload succeeded (FR-6)', async () => {
+    const onUpload = jest.fn().mockResolvedValue({ profileExtracted: false });
+    const { container } = renderDropzone(onUpload);
+
+    fireEvent.change(fileInput(container), { target: { files: [makeFile('scan.pdf', 2048)] } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/uploaded to s3/i)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/couldn.t read its text/i)).toBeInTheDocument();
+    expect(screen.queryByText(/extracted \d+ skills/i)).not.toBeInTheDocument();
   });
 
   it('shows the error state and lets the user dismiss it (F2 error state)', async () => {

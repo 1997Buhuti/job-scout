@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Create tests directory",
+      "trigger": "SessionStart",
+      "description": "Create tests directory for parseCvPdf",
+      "action": {
+        "type": "command",
+        "command": "mkdir -p \"c:\\My Projhects\\job-scout\\backend\\src\\modules\\cvModule\\parseCvPdf\\__tests__\""
+      }
+    }
+  ]
+}

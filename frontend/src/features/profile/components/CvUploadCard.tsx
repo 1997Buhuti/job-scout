@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 
 import { useUserProfile } from '@/features/profile/context/UserProfileContext';
-import { uploadAndParseCv } from '@/lib/api/cvService';
+import { processCvUpload } from '@/features/cv/api/processCvUpload';
 
 import { CvUploadDropzone, type CvUploadResult } from './CvUploadDropzone';
 
@@ -32,10 +32,14 @@ export function CvUploadCard() {
 
   const handleUpload = useCallback(
     async (file: File): Promise<CvUploadResult> => {
-      // POST /cv/presign → PUT to S3 → POST /cv/parse (persists cvS3Key).
-      const result = await uploadAndParseCv(file);
+      // POST /cv/presign → PUT to S3 + read the PDF in the browser →
+      // POST /cv/parse { key, cvProfile } (persists cvS3Key and cvProfile).
+      const result = await processCvUpload(file);
       await refresh(true);
-      return { charCount: result.charCount };
+      return {
+        profileExtracted: result.profileExtracted,
+        skillsCount: result.cvProfile?.skills.length,
+      };
     },
     [refresh],
   );
