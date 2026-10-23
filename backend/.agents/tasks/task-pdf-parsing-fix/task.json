@@ -1,0 +1,7 @@
+{
+  "task_id": "task-pdf-parsing-fix",
+  "task_description": "Fix CV PDF parsing endpoint to properly extract text from PDFs using pdf-parse library",
+  "status": "pending",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}

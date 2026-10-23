@@ -17,14 +17,19 @@ const PDF_EXTENSION = '.pdf';
 
 /** Result of a successful upload, supplied by the caller's upload handler. */
 export interface CvUploadResult {
-  /** Parsed character count (from POST /cv/parse) shown in the success state. */
-  charCount?: number;
+  /**
+   * False when the PDF was uploaded but its text could not be read in the
+   * browser (e.g. a scanned image). Defaults to true when omitted.
+   */
+  profileExtracted?: boolean;
+  /** Number of skills extracted from the CV, shown in the success state. */
+  skillsCount?: number;
 }
 
 interface CvUploadDropzoneProps {
   /**
-   * Performs the upload (presign → PUT to S3 → parse). Reject/throw to
-   * surface the error state.
+   * Performs the upload (presign → PUT to S3 + local PDF read → save).
+   * Reject/throw to surface the error state.
    */
   onUpload: (file: File) => Promise<CvUploadResult | void>;
 }
@@ -36,7 +41,8 @@ type UploadState =
       status: 'success';
       fileName: string;
       sizeLabel: string;
-      charCount?: number;
+      profileExtracted: boolean;
+      skillsCount?: number;
     }
   | { status: 'error'; message: string };
 
@@ -86,7 +92,8 @@ export function CvUploadDropzone({ onUpload }: CvUploadDropzoneProps) {
           status: 'success',
           fileName: file.name,
           sizeLabel: formatBytes(file.size),
-          charCount: result?.charCount,
+          profileExtracted: result?.profileExtracted ?? true,
+          skillsCount: result?.skillsCount,
         });
       } catch (err) {
         setState({
@@ -177,7 +184,7 @@ export function CvUploadDropzone({ onUpload }: CvUploadDropzoneProps) {
               Uploading {state.fileName}…
             </div>
             <div className="text-xs text-outline">
-              Uploading directly to S3, then parsing.
+              Uploading directly to S3 and reading your CV.
             </div>
           </>
         ) : (
@@ -251,13 +258,21 @@ export function CvUploadDropzone({ onUpload }: CvUploadDropzoneProps) {
                 </span>
                 Uploaded to S3
               </span>
-              {state.charCount !== undefined && (
+              {state.profileExtracted && state.skillsCount !== undefined && (
                 <>
                   <span>•</span>
-                  <span>Parsed — {state.charCount.toLocaleString()} characters</span>
+                  <span>
+                    Extracted {state.skillsCount.toLocaleString()}{' '}
+                    {state.skillsCount === 1 ? 'skill' : 'skills'} from your CV
+                  </span>
                 </>
               )}
             </div>
+            {!state.profileExtracted && (
+              <div className="mt-1 text-xs text-on-surface-variant">
+                CV uploaded, but we couldn&apos;t read its text. You can add your skills manually.
+              </div>
+            )}
           </div>
           <button
             type="button"

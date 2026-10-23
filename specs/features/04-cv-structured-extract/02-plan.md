@@ -1,203 +1,170 @@
-# Feature: CV Structured Extract — Plan (How)
+# Feature: CV Structured Extract - Plan (How)
 
 **Feature slug:** `04-cv-structured-extract`  
 **Implements:** [01-spec.md](./01-spec.md)  
-**Stack:** Serverless Framework v3 · Node.js 20.x · AWS SDK v3 · Next.js App Router · Amplify Gen 2 · `us-east-1`
+**Stack:** Serverless Framework v4 - Node.js 24.x - AWS SDK v3 - Next.js App Router - Amplify Gen 2 - `us-east-1`
+
+> **Revision (client-side extraction):** extraction moved from the `parseCvPdf` Lambda to the
+> browser. Root cause of the change: `pdf-parse` v2 (pdfjs) throws `DOMMatrix is not defined`
+> in the bundled Lambda (its `@napi-rs/canvas` polyfill is a native module that is not
+> shipped), and the regex fallback then produced binary garbage that was persisted as a CV.
 
 ---
 
 ## Architecture overview
 
 ```text
-POST /cv/parse (from 01-cv-upload)
+Browser (Profile page, CvUploadDropzone)
+  1. POST /cv/presign                      -> { uploadUrl, key }
+  2. in parallel:
+       a. PUT file -> S3 (presigned URL)
+       b. pdf-parse (web build): PDF -> text (lazy import, client only)
+          structureCvProfile(text, key)    -> CvProfile   (regex + dictionary)
+          (on failure: cvProfile = undefined, upload still succeeds)
+  3. POST /cv/parse  { key, cvProfile? }   (Cognito JWT) -> 204 No Content
         |
         v
-Lambda: parseCvPdf (enhanced)
-  - Extract PDF text (existing)
-  - NEW: structureExtraction(text) ? CvProfile
-  - Update UserProfile.cvProfile (DynamoDB)
-  - Return { key, text, charCount, cvProfile }
+Lambda: parseCvPdf  (no PDF parsing any more)
+  - Verify JWT, key prefix cvs/{userId}/
+  - Sanitize cvProfile (types, caps, drop unknown fields)
+  - Set extractedAt (server time) + sourceCvS3Key (= key)
+  - UpdateItem UserProfile: cvS3Key, updatedAt, [cvProfile]
+  - Return 204 No Content (the browser already has the data)
         |
         v
-DynamoDB: UserProfile
-  - cvProfile attribute (map/document)
+DynamoDB: UserProfile.cvProfile
         |
         v
-Frontend: Profile UI
-  - Display skills chips
-  - User edits ? PUT /profile
+Frontend: Profile UI -> skills chips (edit) -> PUT /profile
 ```
 
-**Decision:** Integrate structured extraction into existing `parseCvPdf` Lambda rather than creating a separate endpoint. This reduces cold starts, latency, and simplifies the client flow.
+**Decisions:**
+
+- Extraction + structuring run in the browser; the API only validates and persists.
+- Keep the existing `POST /cv/parse` route and `parseCvPdf` Lambda name to avoid infra churn. The request body changes from `{ key }` to `{ key, cvProfile? }`. Renaming the route/function to something like `saveCvProfile` is optional later cleanup.
+- The client-sent `cvProfile` is **untrusted input**: the API re-validates everything.
+- Client extraction failure never blocks the upload (FR-6).
 
 ---
 
-## Backend — Enhanced `parseCvPdf`
+## Frontend - extraction (new)
+
+### Module structure (per `frontend-feature-structure`)
+
+```text
+frontend/src/features/cv/
++-- types/
+|   +-- cvProfile.ts            (CvProfile, CvExperience, CvEducation)
++-- utils/
+|   +-- extractPdfText.ts       (File -> text via pdf-parse web build, client only)
+|   +-- structureExtraction.ts  (text -> CvProfile)
+|   +-- patterns.ts             (section headings, dates, degrees)
+|   +-- skillDictionary.ts      (curated dictionary; port)
+|   +-- __tests__/ ...          (ported + new tests)
++-- api/
+    +-- processCvUpload.ts      (orchestrates presign, S3 PUT, extract, save)
+```
+
+`src/lib/api/cvService.ts` keeps the low-level HTTP calls (presign, S3 PUT, `POST /cv/parse`). Orchestration lives in `features/cv/api/` so `lib/` has no runtime dependency on `features/` (it only imports the `CvProfile` type, erased at compile time).
+
+`structureExtraction.ts`, `patterns.ts`, `skillDictionary.ts` also exist in `backend/src/modules/cvModule/parseCvPdf/`. They were **rewritten, not copied**, because the backend versions had defects that made extraction return almost nothing on real CVs: section-header regexes contained literal spaces (so "Skills"/"Experience"/"Education" were never found, hence `experience: 0, education: 0` in production), and the dictionary used substring matching with tiny aliases (`c`, `go`, `r`, `js`, `es`, `pm`...), so random bytes produced "skills". The frontend versions use line-based section detection, word-boundary matching, case-sensitive/"weak" handling for ambiguous terms, and a cleaner dictionary. The backend copies are **deleted** after the Lambda rework (B20) so there is a single source of truth.
+
+### `extractPdfText.ts`
+
+- **Library (implemented):** `pdf-parse@^2.4.5` in `frontend/package.json`. Its `exports` map has a `browser` condition that resolves to a web build (`dist/pdf-parse/web/pdf-parse.es.js`, bundled pdf.js, no native canvas), which Next.js picks for client bundles. Verified with both `next build --webpack` (used by Amplify) and the default Turbopack build. The Node-only `@napi-rs/canvas` references in that chunk are behind pdf.js's `isNodeJS` guard.
+- **Client only.** `pdf-parse` is imported with `await import('pdf-parse')` inside `extractPdfText` (never at module top level): it is a separate lazy chunk (~460 KB) and never runs during SSR/prerender.
+- **Worker:** pdf-parse's web build needs `PDFParse.setWorker(url)`. `pdf-parse` does not export the worker file, so `frontend/scripts/copy-pdf-worker.mjs` copies `pdf.worker.mjs` from `node_modules` to `frontend/public/pdf.worker.mjs` (git-ignored) in the `predev` / `prebuild` npm scripts; the app uses `PDF_WORKER_URL = '/pdf.worker.mjs'`. Same-origin, works with webpack and Turbopack, no CDN.
+- **Line reconstruction:** `getText({ lineEnforce: true, cellSeparator: ' ', pageJoiner: '' })` makes pdf-parse rebuild lines from text-item positions (so headings stay on their own lines), join same-line cells with a space, and omit its `-- n of m --` page markers. Pages are joined with a blank line, then `normalizeCvText` runs.
+- **Limits:** first 10 pages only, 50,000 chars, 15 s timeout; `destroy()` is always called.
+- Returns the text, or throws a typed error (`EmptyPdfTextError`, `PdfReadError`) for the orchestrator to turn into "no cvProfile".
+
+### `processCvUpload.ts` (orchestrator)
+
+```typescript
+export async function processCvUpload(file: File): Promise<{ key: string; cvProfile?: CvProfile }> {
+  const { uploadUrl, key } = await requestCvPresign();
+
+  const [, cvProfile] = await Promise.all([
+    uploadCvToS3(uploadUrl, file),       // failure here fails the whole upload
+    extractProfile(file, key),           // never throws; returns undefined on failure
+  ]);
+
+  return saveParsedCv(key, cvProfile);   // POST /cv/parse { key, cvProfile? }
+}
+```
+
+`extractProfile` = `extractPdfText` -> `structureCvProfile(text, key)` wrapped in try/catch; logs a console warning (no CV text in logs) and returns `undefined` on any failure.
+
+### `cvService.ts` changes
+
+- `ParsedCvResult` becomes `{ key: string; cvProfile?: CvProfile }` (no `text`/`charCount`).
+- `parseCvPdf(key)` is replaced by `saveParsedCv(key, cvProfile?)` sending `{ key, cvProfile }`.
+- `uploadAndParseCv` is removed in favor of `processCvUpload`.
+
+---
+
+## Structured extraction algorithm (unchanged logic, now in the browser)
+
+Same algorithm as before; implemented in `features/cv/utils/`. Summary:
+
+1. **Section detection** (`patterns.ts`): header regexes for skills / experience / education / summary; split text into sections by heading lines.
+2. **Skills** (`structureExtraction.ts`): dictionary match with word boundaries on the whole text; add canonical form; dedupe; cap 40 items, 48 chars each.
+3. **Experience:** date-range anchors (MM/YYYY, Month YYYY, YYYY-YYYY, Present); company/title taken near each anchor; cap 15.
+4. **Education:** degree patterns (B.Sc., M.Sc., PhD, Bachelor's, Master's, Diploma) plus year and institution; cap 10.
+5. **Name/summary:** first short line or `Name:` label; summary section or first paragraph; cap 500 chars.
+6. **Orchestrator** `structureCvProfile(text, sourceKey)`: assembles `CvProfile` with `extractedAt` and `sourceCvS3Key`.
+
+**Skill dictionary:** `skillDictionary.ts`, ~200 entries for MVP, bundled as a TS module and loaded together with the extractor (lazy chunk). Expanding it requires a frontend deploy.
+
+---
+
+## Backend - reworked `parseCvPdf`
+
+### What changes
+
+| Step | Before | After |
+| --- | --- | --- |
+| 1. Auth | JWT + `cvs/{userId}/` prefix | unchanged |
+| 2. Download | `GetObject` from S3 | **removed** |
+| 3. Extract text | `pdf-parse` + regex fallback | **removed** |
+| 4. Structure | `structureCvProfile(text)` on server | **removed** (done in browser) |
+| 5. Validate | n/a | **NEW:** `sanitizeCvProfile(input, key)` |
+| 6. Persist | `UpdateItem` with `cvS3Key`, `updatedAt`, `cvProfile` | same; `cvProfile` only if provided and valid |
+| 7. Response | `{ key, text, charCount, cvProfile }` | `204 No Content` |
 
 ### Module structure
 
 ```text
 backend/src/modules/cvModule/parseCvPdf/
-+-- handler.ts              (orchestrator)
-+-- parseCvPdf.ts           (existing PDF ? text)
-+-- structureExtraction.ts  (NEW: text ? CvProfile)
-+-- skillDictionary.ts      (NEW: curated skill list)
-+-- patterns.ts             (NEW: regex patterns for sections)
-+-- types.ts                (CvProfile interfaces)
-+-- __tests__/
-    +-- parseCvPdf.test.ts  (existing)
-    +-- structureExtraction.test.ts (NEW)
++-- handler.ts              (unchanged orchestrator)
++-- parseCvPdf.ts           (reworked: validate + persist only)
++-- validateCvProfile.ts    (NEW: sanitizeCvProfile)
++-- types.ts                (request: { key, cvProfile? }; response: { key, cvProfile? })
++-- _tests/
+    +-- parseCvPdf.test.ts          (updated for new contract)
+    +-- validateCvProfile.test.ts   (NEW)
 ```
 
-### Enhanced handler flow
+Removed after the frontend port is verified: `structureExtraction.ts`, `patterns.ts`, `skillDictionary.ts`, `__tests__/structureExtraction.test.ts`.
 
-| Step | Detail |
-| --- | --- |
-| 1. Auth | Verify Cognito JWT; check `cvs/{userId}/` prefix |
-| 2. Download | `GetObject` from S3 (existing) |
-| 3. Extract text | `pdf-parse` ? plain text (existing) |
-| 4. **NEW: Structure** | `structureExtraction(text)` ? `CvProfile` |
-| 5. **NEW: Persist** | `UpdateItem` on `UserProfile`: set `cvProfile` attribute |
-| 6. Response | `200 { key, text, charCount, cvProfile }` |
+### `sanitizeCvProfile(input: unknown, key: string): CvProfile`
 
-### Dependencies
+- Reject (throw `BadRequestError`) if `input` is not a plain object, or if `skills`/`experience`/`education` are present but not arrays.
+- Build a **new** object from known fields only (drops unknown/extra fields).
+- Strings: must be `string`, trimmed, empty dropped.
+- Enforce FR-2 caps: skills 40 (48 chars each, deduped), experience 15, education 10, summaries 500 chars, `fullName` max 100 chars. Entries missing required strings (`title`/`company`, `institution`) are dropped.
+- Set `extractedAt = new Date().toISOString()` and `sourceCvS3Key = key`; ignore client values.
+- Request body size: rely on API Gateway limits plus a sane explicit check (e.g. reject bodies over ~64 KB) before parsing.
 
-Add to `backend/package.json`:
+### DynamoDB write
 
-```json
-{
-  "dependencies": {
-    "pdf-parse": "^1.1.1"  // if not already present
-  }
-}
-```
+Same `UpdateItem` as today (already implemented, marshalling `cvProfile` as a map). When `cvProfile` is absent, only `cvS3Key` and `updatedAt` are set, so any previous `cvProfile` is retained (FR-6).
 
-**No additional NLP libraries in MVP** — use native regex and string methods for pattern matching.
+### Dependencies and infra cleanup
 
----
-
-## Structured extraction algorithm
-
-### 1. Section detection (`patterns.ts`)
-
-Detect CV sections using regex:
-
-```typescript
-const SECTION_PATTERNS = {
-  skills: /\b(skills?|technical skills?|core competencies|technologies)\b/i,
-  experience: /\b(experience|work history|employment|professional experience)\b/i,
-  education: /\b(education|academic|qualifications?)\b/i,
-  summary: /\b(summary|profile|objective|about me)\b/i,
-};
-
-function detectSections(text: string): Map<string, string> {
-  // Split text into sections based on headings
-  // Return map of sectionType ? sectionText
-}
-```
-
-### 2. Skills extraction (`structureExtraction.ts`)
-
-```typescript
-import { SKILL_DICTIONARY } from './skillDictionary';
-
-function extractSkills(text: string): string[] {
-  const skills = new Set<string>();
-  const normalizedText = text.toLowerCase();
-  
-  // Match against dictionary with fuzzy boundaries
-  for (const [canonical, variations] of Object.entries(SKILL_DICTIONARY)) {
-    for (const variant of [canonical, ...variations]) {
-      const pattern = new RegExp(`\\b${escapeRegex(variant)}\\b`, 'gi');
-      if (pattern.test(normalizedText)) {
-        skills.add(canonical); // Add canonical form
-        break;
-      }
-    }
-  }
-  
-  // Cap at 40 skills, max 48 chars each
-  return Array.from(skills)
-    .filter(s => s.length <= 48)
-    .slice(0, 40);
-}
-```
-
-### 3. Experience extraction
-
-```typescript
-function extractExperience(sectionText: string): CvExperience[] {
-  const experiences: CvExperience[] = [];
-  
-  // Pattern: Company name (often in ALL CAPS or bold-like)
-  // Title (often preceded by "as" or on its own line)
-  // Dates (MM/YYYY – MM/YYYY or similar)
-  
-  const datePattern = /(\d{1,2}\/\d{4}|\w+ \d{4}|\d{4})\s*[–-]\s*(\d{1,2}\/\d{4}|\w+ \d{4}|\d{4}|present)/gi;
-  
-  // Split by date ranges as anchors
-  // Extract company + title near each date
-  // (Implementation details in code)
-  
-  return experiences.slice(0, 15); // Cap at 15
-}
-```
-
-### 4. Education extraction
-
-```typescript
-function extractEducation(sectionText: string): CvEducation[] {
-  const education: CvEducation[] = [];
-  
-  const degreePatterns = /\b(B\.?S\.?c?|M\.?S\.?c?|PhD|Bachelor'?s?|Master'?s?|Diploma)\b/gi;
-  const yearPattern = /\b(19|20)\d{2}\b/g;
-  
-  // Extract degree + institution + year
-  // (Implementation details in code)
-  
-  return education.slice(0, 10); // Cap at 10
-}
-```
-
-### 5. Name and summary extraction
-
-```typescript
-function extractNameAndSummary(text: string): { fullName?: string; summary?: string } {
-  // Name: typically first line or after "Name:" label
-  const firstLine = text.split('\n')[0]?.trim();
-  const fullName = firstLine?.length < 100 ? firstLine : undefined;
-  
-  // Summary: from "Summary" section or first paragraph
-  const summary = extractSummarySection(text)?.slice(0, 500);
-  
-  return { fullName, summary };
-}
-```
-
----
-
-## Skill dictionary design
-
-### `skillDictionary.ts`
-
-```typescript
-export const SKILL_DICTIONARY: Record<string, string[]> = {
-  // Canonical skill ? [variations]
-  'JavaScript': ['js', 'javascript', 'java script', 'ecmascript'],
-  'TypeScript': ['ts', 'typescript', 'type script'],
-  'Python': ['python', 'py'],
-  'AWS': ['aws', 'amazon web services'],
-  'React': ['react', 'reactjs', 'react.js'],
-  'Node.js': ['node', 'nodejs', 'node.js'],
-  'Docker': ['docker', 'containerization'],
-  'Kubernetes': ['k8s', 'kubernetes', 'kube'],
-  // ... 200-500 entries for MVP
-};
-```
-
-**MVP scope:** ~200 common skills (tech + soft skills). Can be expanded post-MVP.
-
-**Storage:** Bundled as a `.ts` file in Lambda. Post-MVP: move to S3 for easier updates.
+- Remove `pdf-parse` from `backend/package.json` (and regenerate the lockfile).
+- Remove debug `console.log` statements and the regex fallback from `parseCvPdf.ts`.
+- The Lambda no longer reads S3: the `CV_BUCKET_NAME` env var and the `s3:GetObject` IAM statement become unnecessary for this function. Removing IAM permissions is a security-relevant change - make it a separate, explicit step (task B21) and only after confirming nothing else reads CVs.
 
 ---
 
@@ -205,74 +172,26 @@ export const SKILL_DICTIONARY: Record<string, string[]> = {
 
 ### `UserProfile` enhancement
 
-Add optional attribute:
-
 ```typescript
 export interface UserProfile {
   // ... existing fields
-  cvProfile?: CvProfile; // NEW: structured CV data
+  cvProfile?: CvProfile; // structured CV data (sanitized server-side)
 }
 ```
 
-**DynamoDB `UpdateItem` expression:**
-
-```typescript
-const params = {
-  TableName: process.env.USERS_TABLE_NAME,
-  Key: { userId },
-  UpdateExpression: 'SET cvProfile = :cvProfile, updatedAt = :updatedAt',
-  ExpressionAttributeValues: {
-    ':cvProfile': cvProfile,
-    ':updatedAt': new Date().toISOString(),
-  },
-};
-```
-
-No schema migration needed — optional attribute.
+No schema migration needed - optional attribute (already written by the current handler).
 
 ---
 
-## Frontend integration
+## Frontend integration - profile UI
 
-### Profile UI updates
+**Skills display:** `frontend/src/features/profile/components/SkillsSection.tsx` - chips from `cvProfile.skills`, add/remove, editing state.
 
-**File:** `frontend/src/features/profile/components/ProfileForm.tsx` (or similar)
+**Save flow:** `PUT /profile` with the edited `cvProfile.skills` merged into the existing profile data.
 
-**Skills display:**
+**Experience/Education (read-only in MVP):** formatted lists; editing deferred.
 
-```tsx
-<div className="skills-section">
-  <h3>Skills</h3>
-  <div className="skills-chips">
-    {cvProfile?.skills.map(skill => (
-      <Chip key={skill} label={skill} onDelete={() => removeSkill(skill)} />
-    ))}
-  </div>
-  <Button onClick={addSkill}>Add Skill</Button>
-</div>
-```
-
-**Save flow:**
-
-```tsx
-const handleSave = async () => {
-  await fetch(`${API_URL}/profile`, {
-    method: 'PUT',
-    headers: { 
-      'Authorization': `Bearer ${idToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ 
-      targetRoles, 
-      cvProfile: { ...cvProfile, skills: editedSkills } 
-    }),
-  });
-};
-```
-
-**Experience/Education (read-only in MVP):**
-
-Display as formatted list; editing deferred to later phase.
+**Dropzone feedback:** `CvUploadCard` calls `processCvUpload`; `CvUploadResult` carries `skillsCount` (replaces `charCount`). Success message: "Extracted N skills from your CV". If `cvProfile` is undefined: "CV uploaded, but we couldn't read its text. You can add your skills manually." Include a "View Profile" link.
 
 ---
 
@@ -280,43 +199,42 @@ Display as formatted list; editing deferred to later phase.
 
 | Scenario | Behavior |
 | --- | --- |
-| Empty PDF text | Skip extraction; return `422 { error: "Empty CV text" }` |
-| No sections detected | Return `CvProfile` with empty arrays; do not fail |
-| Parser crash | Catch exception; log; return previous `cvProfile` if exists, else `422` |
-| Skill dictionary load fail | Log warning; continue with empty skill list (graceful degradation) |
+| Empty text / scanned PDF (client) | No `cvProfile`; upload succeeds; UI shows manual-entry message |
+| pdfjs error or timeout (client) | Same as above; warning logged without CV content |
+| No sections detected | `CvProfile` with empty arrays; do not fail |
+| S3 PUT fails | Upload fails with a retryable error; `POST /cv/parse` is not called |
+| Malformed `cvProfile` at API | `400`; nothing written; previous `cvProfile` kept |
+| Wrong key prefix at API | `403` |
+| DynamoDB write fails | Existing behavior: logged; see note in tasks (decide whether to surface as error) |
 
-**Principle:** Never block CV upload on extraction failure. Always prefer returning partial data over crashing.
+**Principle:** Never block CV upload on extraction failure. Prefer partial data over crashing, but never persist unvalidated client data.
 
 ---
 
 ## Testing strategy
 
-### Unit tests
+### Frontend unit tests
 
-1. **`structureExtraction.test.ts`:**
-   - Test skill extraction with known dictionary
-   - Test section detection with sample CV text
-   - Test experience/education parsing with various date formats
-   - Test caps (40 skills, 15 experiences, etc.)
+Runner: the existing **Jest** setup in `frontend/` (`jest.config.js`, ts-jest, jsdom, Testing Library); `npm test` was added to `frontend/package.json`. No Vitest.
 
-2. **`parseCvPdf.test.ts` (enhance existing):**
-   - Mock S3 GetObject
-   - Verify `cvProfile` attribute is persisted
-   - Verify response includes `cvProfile`
+1. `structureExtraction.test.ts` (new tests; the extractor was rewritten rather than copied, see below): skills, experience layouts and date formats, education, name/summary, caps, garbage input.
+2. `extractPdfText.test.ts`: mocks `pdf-parse`; checks worker setup, page limit/`lineEnforce` options, normalization, truncation, empty text, error wrapping and that the parser is always destroyed.
+3. `processCvUpload.test.ts`: mocks `cvService` and the extractor; extraction failure still results in `saveParsedCv(key, undefined)`, S3 failure aborts, no CV content in logs.
+4. `CvUploadDropzone.test.tsx`: updated for the `skillsCount` / `profileExtracted` result.
 
-### Integration test
+Also verified manually with a real generated PDF through `pdf-parse` (same options as the app): text kept its line structure and `structureCvProfile` produced the expected skills, experience and education. Not yet verified in a real browser (worker loading from `/pdf.worker.mjs`).
 
-- Upload a real PDF CV via UI
-- Verify `GET /profile` returns populated `cvProfile.skills`
-- Edit skills in UI
-- Verify `PUT /profile` persists changes
-- Re-fetch and confirm edits
+### Backend unit tests (Jest, existing)
 
-### Manual validation (MVP acceptance)
+1. `validateCvProfile.test.ts`: caps, trimming, dedupe, dropped unknown fields, overridden `extractedAt`/`sourceCvS3Key`, rejection of non-object/arrays-of-wrong-type.
+2. `parseCvPdf.test.ts` (update): no S3 call; with `cvProfile` -> persisted and returned; without -> only `cvS3Key`/`updatedAt` written; wrong prefix -> 403; malformed -> 400.
 
-- Test with 5-10 real CVs of varying formats
-- Measure skill extraction accuracy (target =70% for well-formatted CVs)
-- Verify no crashes on malformed PDFs
+### Integration / manual
+
+- Upload a real text PDF through the UI on `dev`; verify `POST /cv/parse` payload contains a populated `cvProfile`, `GET /profile` returns it, and CloudWatch shows no `DOMMatrix` / pdf-parse errors.
+- Upload a scanned/image PDF; verify the upload succeeds, no `cvProfile` is written, and the previous one (if any) is retained.
+- Try a hand-crafted request with oversized/unknown fields and another user's key prefix; verify sanitization and `403`.
+- Test with 5-10 real CVs of varying formats (target >=70% skill extraction accuracy for well-formatted CVs). Also verify in a production build (`next build` + start), not only in dev, since worker/bundler behavior can differ.
 
 ---
 
@@ -324,13 +242,12 @@ Display as formatted list; editing deferred to later phase.
 
 | Resource | MVP estimate (per CV upload) | Cost |
 | --- | --- | --- |
-| Lambda execution | 512 MB, ~2-4 sec | ~$0.000017/upload |
+| Browser | pdfjs lazy chunk + a few hundred ms of parsing | $0 |
+| Lambda execution | 128-512 MB, < 200 ms (validate + write; no S3 download or parsing) | ~$0.000002/upload |
 | DynamoDB write | 1 WCU (< 1 KB `cvProfile`) | ~$0.0000013/upload |
-| **Total per upload** | | **~$0.00002** |
+| **Total per upload** | | **< $0.00001** |
 
-For 100 CV uploads in MVP: **~$0.002** (negligible vs $50 budget).
-
-Compare to Bedrock Nova Micro: **~$0.01-0.02/upload** ? 500-1000x more expensive.
+Compare to Bedrock Nova Micro: ~$0.01-0.02/upload.
 
 ---
 
@@ -338,28 +255,35 @@ Compare to Bedrock Nova Micro: **~$0.01-0.02/upload** ? 500-1000x more expensive
 
 | Decision | Choice |
 | --- | --- |
-| Inline vs separate endpoint | **Inline** in `parseCvPdf` |
-| Skill dictionary storage | **Bundled `.ts` file** (MVP); S3 post-MVP |
+| Where extraction runs | **Browser** (`pdf-parse` web build / pdf.js), not Lambda |
+| Why not fix `pdf-parse` on Lambda | Needs native `@napi-rs/canvas` (external + Linux binary) or a different library; browser avoids it entirely |
+| API contract | Keep `POST /cv/parse`; body `{ key, cvProfile? }` |
+| Trust of client data | **Untrusted**; server sanitizes and sets `extractedAt`/`sourceCvS3Key` |
+| Skill dictionary storage | **Bundled TS module in frontend** (MVP) |
 | UI editing scope | **Skills only** (editable); experience/education read-only |
 | Pattern matching library | **Native regex** (no heavy NLP) |
-| Failed extract behavior | **Keep previous** `cvProfile`; log error |
+| Failed extract behavior | **Keep previous** `cvProfile`; upload still succeeds |
+| Single source of truth for extractor | Frontend only; backend copy deleted after port |
 
 ---
 
 ## Security & compliance
 
-- User can only extract/update their own `cvProfile` (enforce `userId` from JWT).
-- No PII leakage in logs (truncate CV text in error messages).
-- `cvProfile` attribute is within authenticated profile read/write permissions (no new IAM policies needed).
+- User can only write their own `cvProfile` (`userId` from JWT; `cvs/{userId}/` prefix enforced).
+- The API never trusts client-provided `cvProfile` structure, size, `extractedAt`, or `sourceCvS3Key`.
+- The server does not verify that `cvProfile` matches the PDF in S3 (accepted for MVP: it only affects the caller's own profile). If matching ever uses `cvProfile` across users, revisit with server-side verification.
+- No CV text in logs (client or server); log only counts and error names.
+- No new IAM permissions; optionally remove `s3:GetObject` from the Lambda role once unused (B21).
 
 ---
 
 ## Future enhancements (post-MVP)
 
-- Add Textract for scanned/image PDFs (OCR).
+- Add Textract for scanned/image PDFs (OCR), likely as a server-side path.
+- Optional server-side re-extraction job from the stored PDF (needs a Lambda-safe parser such as `unpdf`).
 - Use Bedrock for advanced extraction if budget increases.
 - Editable experience/education in UI.
 - Skill trend analysis and auto-suggestions.
 - Support `.docx` format.
-- Skill dictionary updates from admin panel.
-
+- Skill dictionary served from S3/admin panel.
+- Rename `POST /cv/parse` / `parseCvPdf` to reflect the new responsibility.

@@ -1,8 +1,10 @@
 import type { AWS } from '@serverless/typescript';
 
 /**
- * `POST /cv/parse` — parse a previously uploaded CV PDF and persist the
- * latest object key on the authenticated user's `UserProfile` record.
+ * `POST /cv/parse` - persist the uploaded CV on the authenticated user's
+ * `UserProfile`: the latest object key plus the structured `cvProfile` the
+ * browser extracted (validated and sanitized here). The Lambda does not read
+ * or parse the PDF itself.
  */
 export const parseCvPdfFunctions: AWS['functions'] = {
   parseCvPdf: {
@@ -10,9 +12,6 @@ export const parseCvPdfFunctions: AWS['functions'] = {
     timeout: 30,
     memorySize: 512,
     environment: {
-      CV_BUCKET_NAME: {
-        Ref: 'CvBucket',
-      },
       USERS_TABLE_NAME: {
         Ref: 'UsersTable',
       },

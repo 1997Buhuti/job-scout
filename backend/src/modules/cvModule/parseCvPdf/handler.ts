@@ -12,21 +12,11 @@ const parseCvEndpoint = async (event: APIGatewayProxyEventV2, context: Context) 
   const logger = new Logger(CV_PRESIGN_SERVICE, context.awsRequestId);
 
   try {
-    const result = await parseCvPdf({ event, logger });
-
-    // B12: Include cvProfile in response
-    logger.info({ 
-      message: 'Parsed uploaded CV PDF', 
-      data: { 
-        key: result.key, 
-        charCount: result.charCount, 
-        hasCvProfile: !!result.cvProfile,
-        skillsCount: result.cvProfile?.skills.length || 0,
-      } 
-    });
-    return apiResponse.ok(result);
+    await parseCvPdf({ event, logger });
+    // The browser already has everything it sent; nothing to return.
+    return apiResponse.noContent();
   } catch (err) {
-    return sendErrorResponse(err, logger, 'Error parsing CV PDF');
+    return sendErrorResponse(err, logger, 'Error saving CV');
   }
 };
 
