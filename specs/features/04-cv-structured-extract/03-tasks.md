@@ -66,8 +66,8 @@
 
 ## Database schema update
 
-- [ ] **D1.** Update `specs/02-database-schema.md`: Document `cvProfile?: CvProfile` optional attribute on `UserProfile` with inline type definitions.
-- [ ] **D2.** Verify DynamoDB table schema allows the optional nested map attribute (no migration needed; test write/read with sample `cvProfile` JSON).
+- [x] **D1.** Update `specs/02-database-schema.md`: Document `cvProfile?: CvProfile` optional attribute on `UserProfile` with inline type definitions.
+- [x] **D2.** Verify DynamoDB table schema allows the optional nested map attribute (no migration needed; test write/read with sample `cvProfile` JSON).
 
 ---
 

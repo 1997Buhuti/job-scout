@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { CvUploadCard } from './CvUploadCard';
-import { CognitoAccountCard } from './CognitoAccountCard';
 import { TargetRolesCard } from './TargetRolesCard';
 import { PreferencesCard } from './PreferencesCard';
 import { useUserProfile } from '@/features/profile/context/UserProfileContext';
@@ -12,7 +11,7 @@ import { SkillsSection } from './SkillsSection';
 export function ProfileView() {
   const { profile, refresh } = useUserProfile();
   const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('DynamoDB item updated & S3 lock verified.');
+  const [toastMessage, setToastMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -84,7 +83,7 @@ export function ProfileView() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 w-full md:w-auto">
           <button
             type="button"
-            onClick={() => alert('Version history history modal placeholder')}
+            onClick={() => alert('Version history modal placeholder')}
             className="flex items-center gap-2 rounded-lg bg-surface-container-high px-4 py-2.5 text-sm font-medium text-on-surface hover:bg-surface-bright transition-colors"
           >
             <span className="material-symbols-outlined text-[18px]">
@@ -102,7 +101,7 @@ export function ProfileView() {
             <span className={`material-symbols-outlined text-[18px] ${isSaving ? 'animate-spin' : ''}`}>
               {isSaving ? 'sync' : 'cloud_sync'}
             </span>
-            {isSaving ? 'Syncing...' : 'Save Profile & Sync DynamoDB'}
+            {isSaving ? 'Syncing...' : 'Save Profile'}
           </button>
         </div>
       </div>
@@ -112,7 +111,6 @@ export function ProfileView() {
         {/* Left Column (7 Cols) */}
         <div className="flex flex-col gap-6 lg:col-span-7">
           <CvUploadCard />
-          <CognitoAccountCard />
         </div>
 
         {/* Right Column (5 Cols) */}
