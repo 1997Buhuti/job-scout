@@ -34,6 +34,42 @@ export interface UserProfile {
   /** S3 object key for the uploaded CV PDF, e.g. `cvs/{userId}/{timestamp}.pdf` */
   cvS3Key?: string;
   /**
+   * Structured CV profile extracted from the uploaded PDF.
+   * Populated by `POST /cv/parse` after browser-side extraction.
+   * Optional: if extraction fails or no CV uploaded, this field is absent.
+   */
+  cvProfile?: {
+    /** Best-effort full name from the CV. */
+    fullName?: string;
+    /** Short professional summary if present. */
+    summary?: string;
+    /** Normalized skill labels (deduped, trimmed, case-normalized). */
+    skills: string[];
+    experience: Array<{
+      /** Job title. */
+      title: string;
+      /** Company name. */
+      company: string;
+      /** Free-form period, e.g. "2021 - Present". */
+      period?: string;
+      /** Short summary of responsibilities / achievements. */
+      summary?: string;
+    }>;
+    education: Array<{
+      institution: string;
+      /** Degree earned, e.g. "Bachelor of Science". */
+      degree?: string;
+      /** Field of study, e.g. "Computer Science". */
+      field?: string;
+      /** Graduation year or period string. */
+      year?: string;
+    }>;
+    /** ISO-8601 timestamp of when this extract was produced. */
+    extractedAt: string;
+    /** S3 key of the PDF this extract was derived from. */
+    sourceCvS3Key: string;
+  };
+  /**
    * How often this user’s scrape + match + digest should run.
    * 1 = daily (minimum). 30 = monthly (maximum). Reject values outside 1–30.
    */
@@ -65,7 +101,7 @@ export interface UserProfile {
 ### Access patterns
 
 - `GetItem` by `userId` / `PK+SK`
-- `UpdateItem` for `targetRoles`, `cvS3Key`, `scheduleIntervalDays`, `schedulerEnabled`
+- `UpdateItem` for `targetRoles`, `cvS3Key`, `cvProfile`, `scheduleIntervalDays`, `schedulerEnabled`
 - Dispatcher: query users due to run (`nextRunAt <= now`, `schedulerEnabled = true`)
 
 **GSI (recommended for scheduler dispatcher):**
@@ -202,6 +238,9 @@ UserProfile.userId  ──────────────┐
 JobPosting.jobId    ──────────────┘
 
 UserProfile.cvS3Key ──► s3://{cv-bucket}/{cvS3Key}
+
+UserProfile.cvProfile ──► Stored in DynamoDB UserProfile.cvProfile map attribute
+                        (extracted by browser, validated/persisted by API)
 ```
 
 ---

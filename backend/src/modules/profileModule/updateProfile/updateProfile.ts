@@ -11,6 +11,7 @@ import { BadRequestError, DatabaseError } from '@common/ErrorTypes';
 import { extractCallerClaims } from '@modules/profileModule/getProfile/getProfile';
 import type { UpdateProfileRequest } from './types';
 import type { UserProfile } from '../getProfile/types';
+import type { CvProfile } from '@modules/cvModule/parseCvPdf/types';
 
 const USERS_TABLE_ENV_KEY = 'USERS_TABLE_NAME';
 const MAX_TARGET_ROLES = 10;
@@ -75,7 +76,7 @@ export const updateProfile = async (
       : event.body
     : {};
 
-  const { targetRoles } = body as Partial<UpdateProfileRequest>;
+  const { targetRoles, cvProfile } = body as Partial<UpdateProfileRequest>;
 
   let updateExpression = 'SET updatedAt = :updatedAt';
   const expressionAttributeValues: Record<string, unknown> = {
@@ -86,6 +87,15 @@ export const updateProfile = async (
     const validatedRoles = validateTargetRoles(targetRoles);
     updateExpression += ', targetRoles = :targetRoles';
     expressionAttributeValues[':targetRoles'] = validatedRoles;
+  }
+
+  if (cvProfile !== undefined) {
+    // Validate cvProfile is an object (but don't fully parse - that happens in /cv/parse)
+    if (typeof cvProfile !== 'object' || cvProfile === null) {
+      throw new BadRequestError('cvProfile must be an object if provided');
+    }
+    updateExpression += ', cvProfile = :cvProfile';
+    expressionAttributeValues[':cvProfile'] = cvProfile;
   }
 
   const updateResult = await docClient.send(

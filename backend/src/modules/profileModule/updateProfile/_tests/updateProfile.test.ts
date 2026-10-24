@@ -4,6 +4,11 @@ import { GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
 import { BadRequestError } from '@common/ErrorTypes';
 import { validateTargetRoles, updateProfile } from '@modules/profileModule/updateProfile/updateProfile';
+import type { UserProfile } from '@modules/profileModule/getProfile/types';
+
+interface TestUserProfile extends UserProfile {
+  skills: { name: string; highlighted: boolean }[];
+}
 
 const updateMock = jest.fn();
 const getMock = jest.fn();
@@ -145,10 +150,10 @@ describe('updateProfile', () => {
   });
 
   it('handles update without body (only sets updatedAt)', async () => {
-    const updatedProfile = {
+    const updatedProfile: UserProfile = {
       userId: 'sub-123',
       email: 'user@example.com',
-      targetRoles: [],
+      targetRoles: [] as string[],
       scheduleIntervalDays: 7,
       schedulerEnabled: false,
       createdAt: '2025-01-01T00:00:00.000Z',
@@ -160,5 +165,69 @@ describe('updateProfile', () => {
 
     expect(result).toEqual(updatedProfile);
     expect(updateMock.mock.calls[0][0].input.UpdateExpression).toBe('SET updatedAt = :updatedAt');
+  });
+
+  it('updates cvProfile when provided', async () => {
+    const mockCvProfile = {
+      skills: ['TypeScript', 'AWS', 'Next.js'],
+      experience: [{ title: 'Senior Engineer', company: 'Tech Corp' }],
+      education: [{ institution: 'University' }],
+      extractedAt: '2025-01-14T00:00:00.000Z',
+      sourceCvS3Key: 'cvs/sub-123/test.pdf',
+    };
+    const updatedProfile: UserProfile = {
+      userId: 'sub-123',
+      email: 'user@example.com',
+      targetRoles: [] as string[],
+      cvS3Key: 'cvs/sub-123/test.pdf',
+      cvProfile: mockCvProfile,
+      scheduleIntervalDays: 7,
+      schedulerEnabled: false,
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-14T00:00:00.000Z',
+    };
+    updateMock.mockResolvedValue({ Attributes: updatedProfile });
+
+    const result = await updateProfile(buildEvent('sub-123', { cvProfile: mockCvProfile }));
+
+    expect(result).toEqual(updatedProfile);
+    expect(updateMock.mock.calls[0][0].input.UpdateExpression).toBe('SET updatedAt = :updatedAt, cvProfile = :cvProfile');
+  });
+
+  it('rejects invalid cvProfile (not an object)', async () => {
+    const event = buildEvent('sub-123', { cvProfile: 'not-an-object' });
+
+    await expect(updateProfile(event)).rejects.toThrow(BadRequestError);
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it('updates both targetRoles and cvProfile together', async () => {
+    const mockCvProfile = {
+      skills: ['TypeScript', 'AWS'],
+      experience: [],
+      education: [],
+      extractedAt: '2025-01-14T00:00:00.000Z',
+      sourceCvS3Key: 'cvs/sub-123/test.pdf',
+    };
+    const updatedProfile = {
+      userId: 'sub-123',
+      email: 'user@example.com',
+      targetRoles: ['Engineer'],
+      cvS3Key: 'cvs/sub-123/test.pdf',
+      cvProfile: mockCvProfile,
+      scheduleIntervalDays: 7,
+      schedulerEnabled: false,
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-14T00:00:00.000Z',
+    };
+    updateMock.mockResolvedValue({ Attributes: updatedProfile });
+
+    const result = await updateProfile(buildEvent('sub-123', { 
+      targetRoles: ['Engineer'],
+      cvProfile: mockCvProfile,
+    }));
+
+    expect(result).toEqual(updatedProfile);
+    expect(updateMock.mock.calls[0][0].input.UpdateExpression).toBe('SET updatedAt = :updatedAt, targetRoles = :targetRoles, cvProfile = :cvProfile');
   });
 });

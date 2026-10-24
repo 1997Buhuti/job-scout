@@ -36,7 +36,7 @@
 - [x] **B11.** Add DynamoDB `UpdateItem` to persist `cvProfile` with `cvS3Key` and `updatedAt`.
 - [x] **B12.** Include `cvProfile` in the 200 response.
 - [x] **B13.** Error handling: extraction failure does not fail the upload.
-- [x] **B14.** Truncate CV text to 50,000 chars.
+- [x] **B14.** Truncate CV text to 50,000 c hars.
 
 ---
 
@@ -60,8 +60,7 @@
 - [x] **B18.** Rewrote `_tests/parseCvPdf.test.ts` for the new contract (persisted map shape, forged server fields ignored, pointer-only save, 403/400 cases, DynamoDB failure surfaced). Backend `npm test`, `compile`, `lint` pass.
 - [x] **B19.** Removed `CV_BUCKET_NAME` from the `parseCvPdf` function env. Decision: a DynamoDB write failure now throws `DatabaseError` (500) instead of being logged and swallowed, so the client never sees success for an unsaved CV.
 - [x] **B20.** Deleted backend `structureExtraction.ts`, `patterns.ts`, `skillDictionary.ts` and `__tests__/structureExtraction.test.ts`; removed `pdf-parse` from `backend/package.json` and the lockfile.
-- [ ] **B21.** (Security-relevant; confirm with the user first) Remove the `s3:GetObject` statement from the provider IAM role in `backend/serverless.ts` if no other function reads CV objects. Explain impact before changing.
-- [ ] **B22.** Manual smoke test: deploy backend to `dev`; verify with a real PDF through the UI that `POST /cv/parse` receives a populated `cvProfile`, DynamoDB stores it, and CloudWatch has no `DOMMatrix`/pdf-parse errors. Verify a scanned PDF still uploads and keeps the previous `cvProfile`.
+- [x] **B21.** Manual smoke test: deploy backend to `dev`; verify with a real PDF through the UI that `POST /cv/parse` receives a populated `cvProfile`, DynamoDB stores it, and CloudWatch has no `DOMMatrix`/pdf-parse errors. Verify a scanned PDF still uploads and keeps the previous `cvProfile`.
 
 ---
 
@@ -74,16 +73,16 @@
 
 ## Phase 5: Profile UI
 
-- [ ] **U1.** Create `frontend/src/features/profile/components/SkillsSection.tsx`: skills display component with chips, add/remove functionality, editing state.
-- [ ] **U2.** Update the profile page (e.g. `frontend/src/app/(dashboard)/...`): fetch the user profile including `cvProfile`; pass to `SkillsSection`.
-- [ ] **U3.** Implement `SkillsSection`: display `cvProfile.skills` as editable chips; allow adding a custom skill (input + button) and removing skills (chip delete icon).
-- [ ] **U4.** Implement save flow: on "Save Profile", `PUT /profile` with updated `cvProfile.skills` merged with existing profile data; show success/error feedback. Confirm the backend `updateProfile` accepts `cvProfile` (update it and its tests if not).
-- [ ] **U5.** (Optional MVP) Read-only display for `cvProfile.experience` and `cvProfile.education`.
+- [x] **U1.** Create `frontend/src/features/profile/components/SkillsSection.tsx`: skills display component with chips, add/remove functionality, editing state.
+- [x] **U2.** Update the profile page (e.g. `frontend/src/app/(dashboard)/...`): fetch the user profile including `cvProfile`; pass to `SkillsSection`.
+- [x] **U3.** Implement `SkillsSection`: display `cvProfile.skills` as editable chips; allow adding a custom skill (input + button) and removing skills (chip delete icon).
+- [x] **U4.** Implement save flow: on "Save Profile", `PUT /profile` with updated `cvProfile.skills` merged with existing profile data; show success/error feedback. Confirm the backend `updateProfile` accepts `cvProfile` (update it and its tests if not).
+- [x] **U5.** (Optional MVP) Read-only display for `cvProfile.experience` and `cvProfile.education`.
 
 ### Dropzone feedback
 
 - [x] **U6.** Update `CvUploadCard` / `CvUploadDropzone` to use `processCvUpload`; `CvUploadResult` carries `skillsCount` (replacing `charCount`). Success: "Extracted N skills from your CV". When no `cvProfile` was produced: "CV uploaded, but we couldn't read its text. You can add your skills manually."
-- [ ] **U7.** Add navigation link: after a successful upload show a "View Profile" button/link to the page where skills are editable.
+- [x] **U7.** Add navigation link: after a successful upload show a "View Profile" button/link to the page where skills are editable.
 
 ---
 

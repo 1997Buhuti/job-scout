@@ -29,16 +29,29 @@ export function CvUploadCard() {
   const [skills, setSkills] = useState(initialSkills);
   const [newSkillInput, setNewSkillInput] = useState('');
   const [isAddingSkill, setIsAddingSkill] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   const handleUpload = useCallback(
     async (file: File): Promise<CvUploadResult> => {
+      setUploadSuccess(false);
       // POST /cv/presign → PUT to S3 + read the PDF in the browser →
       // POST /cv/parse { key, cvProfile } (persists cvS3Key and cvProfile).
       const result = await processCvUpload(file);
       await refresh(true);
+      
+      // Update local skills state based on extracted skills
+      if (result.profileExtracted && result.cvProfile && result.cvProfile.skills.length > 0) {
+        const cvSkills = result.cvProfile.skills;
+        setSkills((prevSkills) => [
+          ...prevSkills.filter((s) => !cvSkills.includes(s.name)),
+          ...cvSkills.map((skill) => ({ name: skill, highlighted: false })),
+        ]);
+      }
+      
+      setUploadSuccess(true);
       return {
         profileExtracted: result.profileExtracted,
-        skillsCount: result.cvProfile?.skills.length,
+        skillsCount: result.profileExtracted && result.cvProfile ? result.cvProfile.skills.length : 0,
       };
     },
     [refresh],
@@ -54,6 +67,11 @@ export function CvUploadCard() {
 
   const handleRemoveSkill = (skillName: string) => {
     setSkills(skills.filter((s) => s.name !== skillName));
+  };
+
+  const handleAddSkillSubmit = () => {
+    setIsAddingSkill(false);
+    setNewSkillInput('');
   };
 
   return (
@@ -138,6 +156,25 @@ export function CvUploadCard() {
             </button>
           )}
         </div>
+
+        {/* Show extracted skills count on upload success */}
+        {uploadSuccess && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg bg-secondary/10 px-3 py-2">
+            <span className="material-symbols-outlined text-secondary text-[16px]">
+              check_circle
+            </span>
+            <span className="text-xs text-secondary">
+              {skills.length > 0 ? `Extracted ${skills.length} skills from your CV` : 'CV uploaded, but we couldn\'t read its text'}
+            </span>
+            <button
+              type="button"
+              onClick={() => window.location.href = '/profile'}
+              className="ml-auto rounded bg-secondary px-2 py-1 text-xs font-medium text-on-secondary"
+            >
+              View Profile
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
