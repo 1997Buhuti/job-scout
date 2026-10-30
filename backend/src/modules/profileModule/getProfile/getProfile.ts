@@ -14,6 +14,9 @@ const USERS_TABLE_ENV_KEY = 'USERS_TABLE_NAME';
 
 const PROFILE_DEFAULTS = {
   targetRoles: [],
+  excludedKeywords: [],
+  workModes: ['remote', 'hybrid'],
+  minMonthlySalaryLkr: null as number | null,
   scheduleIntervalDays: 7,
   schedulerEnabled: false,
 } as const;
@@ -61,11 +64,26 @@ export const buildDefaultProfile = (
   userId,
   email,
   targetRoles: [...PROFILE_DEFAULTS.targetRoles],
+  excludedKeywords: [...PROFILE_DEFAULTS.excludedKeywords],
+  workModes: [...PROFILE_DEFAULTS.workModes],
+  minMonthlySalaryLkr: PROFILE_DEFAULTS.minMonthlySalaryLkr,
   scheduleIntervalDays: PROFILE_DEFAULTS.scheduleIntervalDays,
   schedulerEnabled: PROFILE_DEFAULTS.schedulerEnabled,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 });
+
+/**
+ * Fills in defaults for preference fields that are missing from a stored item.
+ * Stored values always win, including an explicit `null` for minMonthlySalaryLkr.
+ */
+export const withProfileDefaults = (item: Partial<UserProfile>): UserProfile => ({
+  excludedKeywords: [...PROFILE_DEFAULTS.excludedKeywords],
+  workModes: [...PROFILE_DEFAULTS.workModes],
+  minMonthlySalaryLkr: PROFILE_DEFAULTS.minMonthlySalaryLkr,
+  scheduleIntervalDays: PROFILE_DEFAULTS.scheduleIntervalDays,
+  ...item,
+}) as UserProfile;
 
 export const getProfile = async (
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
@@ -81,7 +99,7 @@ export const getProfile = async (
   );
 
   if (getResult.Item) {
-    return getResult.Item as UserProfile;
+    return withProfileDefaults(getResult.Item);
   }
 
   const profile = buildDefaultProfile(sub, email);
@@ -103,7 +121,7 @@ export const getProfile = async (
         }),
       );
       if (retryResult.Item) {
-        return retryResult.Item as UserProfile;
+        return withProfileDefaults(retryResult.Item);
       }
     }
     throw err;

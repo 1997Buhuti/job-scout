@@ -74,7 +74,7 @@ describe('getProfile', () => {
 
     const result = await getProfile(buildEvent('sub-123', 'user@example.com'));
 
-    expect(result).toEqual(existingProfile);
+    expect(result).toMatchObject(existingProfile);
     expect(getMock).toHaveBeenCalledTimes(1);
     expect(putMock).not.toHaveBeenCalled();
   });
@@ -132,6 +132,56 @@ describe('getProfile', () => {
     expect(result).toMatchObject({ userId: 'sub-123', targetRoles: ['Existing'] });
     expect(getMock).toHaveBeenCalledTimes(2);
     expect(putMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns defaults for an item without the new preference fields (AC-1)', async () => {
+    getMock.mockResolvedValue({
+      Item: {
+        userId: 'sub-123',
+        email: 'user@example.com',
+        targetRoles: ['Engineer'],
+        scheduleIntervalDays: 7,
+        schedulerEnabled: false,
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+      },
+    });
+
+    const result = await getProfile(buildEvent('sub-123', 'user@example.com'));
+
+    expect(result).toMatchObject({
+      targetRoles: ['Engineer'],
+      excludedKeywords: [],
+      workModes: ['remote', 'hybrid'],
+      minMonthlySalaryLkr: null,
+      scheduleIntervalDays: 7,
+    });
+  });
+
+  it('keeps stored preference values instead of defaults', async () => {
+    getMock.mockResolvedValue({
+      Item: {
+        userId: 'sub-123',
+        email: 'user@example.com',
+        targetRoles: [],
+        excludedKeywords: ['intern'],
+        workModes: ['onsite'],
+        minMonthlySalaryLkr: null,
+        scheduleIntervalDays: 30,
+        schedulerEnabled: true,
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-01T00:00:00.000Z',
+      },
+    });
+
+    const result = await getProfile(buildEvent('sub-123', 'user@example.com'));
+
+    expect(result).toMatchObject({
+      excludedKeywords: ['intern'],
+      workModes: ['onsite'],
+      minMonthlySalaryLkr: null,
+      scheduleIntervalDays: 30,
+    });
   });
 
   it('throws BadRequestError when sub claim is missing', async () => {

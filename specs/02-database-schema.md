@@ -31,6 +31,18 @@ export interface UserProfile {
   userId: string;
   email: string;
   targetRoles: string[];
+  /**
+   * Terms that drop a scraped job before matching when found in its title or description.
+   * Stored trimmed and lowercased. Max 20 entries, max 40 characters each. Default `[]`.
+   */
+  excludedKeywords: string[];
+  /** Accepted work modes. At least one required. Default `["remote", "hybrid"]`. */
+  workModes: Array<"remote" | "hybrid" | "onsite">;
+  /**
+   * Minimum monthly salary expectation in LKR. `null` = no preference.
+   * Stored and returned only; not read by the job search or matching pipeline. Range 0–10,000,000.
+   */
+  minMonthlySalaryLkr: number | null;
   /** S3 object key for the uploaded CV PDF, e.g. `cvs/{userId}/{timestamp}.pdf` */
   cvS3Key?: string;
   /**
@@ -101,7 +113,9 @@ export interface UserProfile {
 ### Access patterns
 
 - `GetItem` by `userId` / `PK+SK`
-- `UpdateItem` for `targetRoles`, `cvS3Key`, `cvProfile`, `scheduleIntervalDays`, `schedulerEnabled`
+- `UpdateItem` for `targetRoles`, `excludedKeywords`, `workModes`, `minMonthlySalaryLkr`, `cvS3Key`, `cvProfile`, `scheduleIntervalDays`, `schedulerEnabled`
+- Partial `UpdateItem`: only fields present in the request are added to the update expression. Absent fields keep their stored values.
+- Items written before these fields existed are returned with defaults applied on read (`excludedKeywords: []`, `workModes: ["remote", "hybrid"]`, `minMonthlySalaryLkr: null`, `scheduleIntervalDays: 7`)
 - Dispatcher: query users due to run (`nextRunAt <= now`, `schedulerEnabled = true`)
 
 **GSI (recommended for scheduler dispatcher):**

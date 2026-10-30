@@ -8,14 +8,22 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 
 import { BadRequestError, DatabaseError } from '@common/ErrorTypes';
 
-import { extractCallerClaims } from '@modules/profileModule/getProfile/getProfile';
+import {
+  extractCallerClaims,
+  withProfileDefaults,
+} from '@modules/profileModule/getProfile/getProfile';
 import type { UpdateProfileRequest } from './types';
-import type { UserProfile } from '../getProfile/types';
+import type { UserProfile, WorkMode } from '../getProfile/types';
 import type { CvProfile } from '@modules/cvModule/parseCvPdf/types';
 
 const USERS_TABLE_ENV_KEY = 'USERS_TABLE_NAME';
 const MAX_TARGET_ROLES = 10;
 const MAX_ROLE_LENGTH = 80;
+const MAX_EXCLUDED_KEYWORDS = 20;
+const MAX_EXCLUDED_KEYWORD_LENGTH = 40;
+const WORK_MODES: readonly WorkMode[] = ['remote', 'hybrid', 'onsite'];
+const MAX_MIN_MONTHLY_SALARY_LKR = 10_000_000;
+const ALLOWED_SCHEDULE_INTERVAL_DAYS: readonly number[] = [1, 7, 30];
 
 const ddbClient = new DynamoDBClient({ region: 'us-east-1' });
 const docClient = DynamoDBDocumentClient.from(ddbClient);
@@ -64,6 +72,81 @@ export const validateTargetRoles = (roles: unknown): string[] => {
   return filtered;
 };
 
+/** Trims, lowercases, and deduplicates keywords. Returns the stored form. */
+export const validateExcludedKeywords = (keywords: unknown): string[] => {
+  if (!Array.isArray(keywords)) {
+    throw new BadRequestError('excludedKeywords must be an array of strings');
+  }
+
+  const normalized = keywords.map((k) => {
+    if (typeof k !== 'string') {
+      throw new BadRequestError('excludedKeywords must contain only strings');
+    }
+    const value = k.trim().toLowerCase();
+    if (value === '') {
+      throw new BadRequestError('excludedKeywords entries must not be empty');
+    }
+    if (value.length > MAX_EXCLUDED_KEYWORD_LENGTH) {
+      throw new BadRequestError(
+        `excludedKeywords entries must be at most ${MAX_EXCLUDED_KEYWORD_LENGTH} characters`,
+      );
+    }
+    return value;
+  });
+
+  const unique = [...new Set(normalized)];
+  if (unique.length > MAX_EXCLUDED_KEYWORDS) {
+    throw new BadRequestError(
+      `excludedKeywords must contain at most ${MAX_EXCLUDED_KEYWORDS} entries`,
+    );
+  }
+
+  return unique;
+};
+
+export const validateWorkModes = (modes: unknown): WorkMode[] => {
+  if (!Array.isArray(modes) || modes.length === 0) {
+    throw new BadRequestError('workModes must be a non-empty array');
+  }
+
+  for (const mode of modes) {
+    if (typeof mode !== 'string' || !WORK_MODES.includes(mode as WorkMode)) {
+      throw new BadRequestError(
+        `workModes must contain only: ${WORK_MODES.join(', ')}`,
+      );
+    }
+  }
+
+  return [...new Set(modes as WorkMode[])];
+};
+
+export const validateMinMonthlySalaryLkr = (value: unknown): number | null => {
+  if (value === null) {
+    return null;
+  }
+  if (
+    typeof value !== 'number' ||
+    !Number.isInteger(value) ||
+    value < 0 ||
+    value > MAX_MIN_MONTHLY_SALARY_LKR
+  ) {
+    throw new BadRequestError(
+      `minMonthlySalaryLkr must be null or an integer from 0 to ${MAX_MIN_MONTHLY_SALARY_LKR}`,
+    );
+  }
+  return value;
+};
+
+export const validateScheduleIntervalDays = (value: unknown): number => {
+  if (
+    typeof value !== 'number' ||
+    !ALLOWED_SCHEDULE_INTERVAL_DAYS.includes(value)
+  ) {
+    throw new BadRequestError('scheduleIntervalDays must be 1, 7, or 30');
+  }
+  return value;
+};
+
 export const updateProfile = async (
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
 ): Promise<UserProfile> => {
@@ -76,7 +159,14 @@ export const updateProfile = async (
       : event.body
     : {};
 
-  const { targetRoles, cvProfile } = body as Partial<UpdateProfileRequest>;
+  const {
+    targetRoles,
+    excludedKeywords,
+    workModes,
+    minMonthlySalaryLkr,
+    scheduleIntervalDays,
+    cvProfile,
+  } = body as Partial<UpdateProfileRequest>;
 
   let updateExpression = 'SET updatedAt = :updatedAt';
   const expressionAttributeValues: Record<string, unknown> = {
@@ -87,6 +177,29 @@ export const updateProfile = async (
     const validatedRoles = validateTargetRoles(targetRoles);
     updateExpression += ', targetRoles = :targetRoles';
     expressionAttributeValues[':targetRoles'] = validatedRoles;
+  }
+
+  if (excludedKeywords !== undefined) {
+    updateExpression += ', excludedKeywords = :excludedKeywords';
+    expressionAttributeValues[':excludedKeywords'] =
+      validateExcludedKeywords(excludedKeywords);
+  }
+
+  if (workModes !== undefined) {
+    updateExpression += ', workModes = :workModes';
+    expressionAttributeValues[':workModes'] = validateWorkModes(workModes);
+  }
+
+  if (minMonthlySalaryLkr !== undefined) {
+    updateExpression += ', minMonthlySalaryLkr = :minMonthlySalaryLkr';
+    expressionAttributeValues[':minMonthlySalaryLkr'] =
+      validateMinMonthlySalaryLkr(minMonthlySalaryLkr);
+  }
+
+  if (scheduleIntervalDays !== undefined) {
+    updateExpression += ', scheduleIntervalDays = :scheduleIntervalDays';
+    expressionAttributeValues[':scheduleIntervalDays'] =
+      validateScheduleIntervalDays(scheduleIntervalDays);
   }
 
   if (cvProfile !== undefined) {
@@ -126,5 +239,5 @@ export const updateProfile = async (
     );
   }
 
-  return updateResult.Attributes as UserProfile;
+  return withProfileDefaults(updateResult.Attributes);
 };
