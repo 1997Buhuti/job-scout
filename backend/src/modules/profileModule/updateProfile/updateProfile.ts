@@ -14,7 +14,6 @@ import {
 } from '@modules/profileModule/getProfile/getProfile';
 import type { UpdateProfileRequest } from './types';
 import type { UserProfile, WorkMode } from '../getProfile/types';
-import type { CvProfile } from '@modules/cvModule/parseCvPdf/types';
 
 const USERS_TABLE_ENV_KEY = 'USERS_TABLE_NAME';
 const MAX_TARGET_ROLES = 10;

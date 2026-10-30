@@ -11,12 +11,6 @@ import {
   validateScheduleIntervalDays,
   updateProfile,
 } from '@modules/profileModule/updateProfile/updateProfile';
-import type { UserProfile } from '@modules/profileModule/getProfile/types';
-
-interface TestUserProfile extends UserProfile {
-  skills: { name: string; highlighted: boolean }[];
-}
-
 const updateMock = jest.fn();
 const getMock = jest.fn();
 
