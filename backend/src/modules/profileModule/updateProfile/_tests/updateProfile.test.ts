@@ -11,6 +11,9 @@ import {
   validateScheduleIntervalDays,
   updateProfile,
 } from '@modules/profileModule/updateProfile/updateProfile';
+import type { UserProfile } from '@modules/profileModule/getProfile/types';
+import type { CvExperience } from '@modules/cvModule/parseCvPdf/types';
+
 const updateMock = jest.fn();
 const getMock = jest.fn();
 
