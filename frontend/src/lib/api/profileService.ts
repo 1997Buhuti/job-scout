@@ -1,38 +1,10 @@
 import { fetchAuthSession, fetchUserAttributes, getCurrentUser } from 'aws-amplify/auth';
 
+import type { UserProfileData } from '@/features/profile/types/userProfile';
+
 import { getApiBaseUrl } from './config';
 
-export interface UserProfileData {
-  userId: string;
-  email: string;
-  targetRoles: string[];
-  cvS3Key?: string;
-  cvProfile?: {
-    skills: string[];
-    experience: Array<{
-      title: string;
-      company: string;
-      period?: string;
-      summary?: string;
-    }>;
-    education: Array<{
-      institution: string;
-      degree?: string;
-      field?: string;
-      year?: string;
-    }>;
-    fullName?: string;
-    summary?: string;
-    extractedAt: string;
-    sourceCvS3Key: string;
-  };
-  scheduleIntervalDays: number;
-  schedulerEnabled: boolean;
-  lastRunAt?: string;
-  nextRunAt?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export type { UserProfileData, WorkMode } from '@/features/profile/types/userProfile';
 
 export interface UserDetail {
   name: string;
