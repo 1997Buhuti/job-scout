@@ -28,7 +28,7 @@ Status key: `[ ]` not started, `[x]` done. Task IDs: **D** = docs, **B** = backe
 
 ## F — Frontend
 
-- [ ] **F1.** Extend `frontend/src/lib/api/profileService.ts` types and the update call for the new fields. Put feature types under `frontend/src/features/profile/types/`.
+- [x] **F1.** Extend `frontend/src/lib/api/profileService.ts` types and the update call for the new fields. Put feature types under `frontend/src/features/profile/types/`.
 - [ ] **F2.** Target Roles & Focus card in `features/profile/components/`: existing role chips plus excluded keyword chips (add and remove, validation inline).
 - [ ] **F3.** Preferences & Guardrails card: work mode toggles (Remote, Hybrid, Colombo Onsite; at least one required), minimum salary input with clear action, Daily / Weekly / Monthly selector mapped to 1 / 7 / 30.
 - [ ] **F4.** Load on mount, save through `PUT /me/profile`, show inline errors from `400` responses, reload saved values on refresh. Covers AC-12.
