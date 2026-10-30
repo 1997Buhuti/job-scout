@@ -2,6 +2,7 @@ import type { AWS } from '@serverless/typescript';
 
 import { testFunctions } from './src/functions/test';
 import { profileFunctions } from './src/modules/profileModule';
+import { schedulerFunctions } from './src/modules/schedulerModule';
 import { getPresignedUrlFunctions } from './src/modules/cvModule/getPresignedUrl';
 import { parseCvPdfFunctions } from './src/modules/cvModule/parseCvPdf';
 import { getCustom } from './src/serverless/configs/serverless-common.config';
@@ -111,6 +112,7 @@ const serverlessConfiguration: AWS = {
     ...getPresignedUrlFunctions,
     ...parseCvPdfFunctions,
     ...profileFunctions,
+    ...schedulerFunctions,
   },
   package: {
     individually: true,
