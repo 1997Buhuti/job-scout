@@ -9,15 +9,15 @@ Status key: `[ ]` not started, `[x]` done. Task IDs: **D** = docs, **B** = backe
 
 ## D — Documentation
 
-- [ ] **D1.** Add `excludedKeywords`, `workModes`, `minMonthlySalaryLkr` to the `UserProfile` interface and the access patterns in `specs/02-database-schema.md`.
+- [x] **D1.** Add `excludedKeywords`, `workModes`, `minMonthlySalaryLkr` to the `UserProfile` interface and the access patterns in `specs/02-database-schema.md`.
 
 ## B — Backend profile API
 
-- [ ] **B1.** Extend the `UserProfile` type and the defaults in `getProfile` (`excludedKeywords []`, `workModes ["remote","hybrid"]`, `minMonthlySalaryLkr null`, `scheduleIntervalDays 7`). Covers FR-5, AC-1.
-- [ ] **B2.** Add validators: `excludedKeywords` (max 20, max 40 chars, trimmed, lowercased, deduplicated), `workModes` (non-empty, known values), `minMonthlySalaryLkr` (null or integer 0 to 10,000,000), `scheduleIntervalDays` (1, 7, or 30). Covers AC-3, AC-4, AC-5, AC-6.
-- [ ] **B3.** Update `updateProfile` to add each new field to the `UpdateExpression` only when it is present, so partial updates don't overwrite other fields. Covers AC-2, AC-7.
-- [ ] **B4.** Unit tests for B2 and B3 in the existing `updateProfile` test file, including a partial update that sends only `workModes`.
-- [ ] **B5.** Unit test `getProfile` returns defaults for an item without the new fields.
+- [x] **B1.** Extend the `UserProfile` type and the defaults in `getProfile` (`excludedKeywords []`, `workModes ["remote","hybrid"]`, `minMonthlySalaryLkr null`, `scheduleIntervalDays 7`). Covers FR-5, AC-1.
+- [x] **B2.** Add validators: `excludedKeywords` (max 20, max 40 chars, trimmed, lowercased, deduplicated), `workModes` (non-empty, known values), `minMonthlySalaryLkr` (null or integer 0 to 10,000,000), `scheduleIntervalDays` (1, 7, or 30). Covers AC-3, AC-4, AC-5, AC-6.
+- [x] **B3.** Update `updateProfile` to add each new field to the `UpdateExpression` only when it is present, so partial updates don't overwrite other fields. Covers AC-2, AC-7.
+- [x] **B4.** Unit tests for B2 and B3 in the existing `updateProfile` test file, including a partial update that sends only `workModes`.
+- [x] **B5.** Unit test `getProfile` returns defaults for an item without the new fields.
 
 ## P — Pipeline filter
 
