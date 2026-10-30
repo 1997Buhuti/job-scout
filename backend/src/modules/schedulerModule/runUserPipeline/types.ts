@@ -17,3 +17,42 @@ export interface JobFilterPreferences {
   excludedKeywords: string[];
   workModes: WorkMode[];
 }
+
+/**
+ * Shared types for the B5 scrape + upsert step of `runUserPipeline`.
+ * Mirrors `specs/02-database-schema.md` §2 (`JobPosting`) verbatim.
+ */
+
+export type SourceSite =
+  | 'topjobs.lk'
+  | 'rooster.jobs'
+  | 'careers.lk'
+  | 'itpro.lk'
+  | 'jobseeker.lk';
+
+export interface JobPosting {
+  /** MD5 hex digest of the canonical job URL */
+  jobId: string;
+  sourceSite: SourceSite;
+  title: string;
+  company: string;
+  url: string;
+  rawDescription: string;
+  scrapedAt: string; // ISO-8601
+}
+
+/**
+ * What a scraper source produces before it has been upserted.
+ * `jobId` is derived from `url` (not scraped); `scrapedAt` is stamped by
+ * `upsertJobPosting` at write time, so neither is present here.
+ */
+export type ScrapedJob = Omit<JobPosting, 'jobId' | 'scrapedAt'>;
+
+/** A pluggable scraper for one job portal. */
+export type ScraperSource = (targetRoles: string[]) => Promise<ScrapedJob[]>;
+
+export interface RunUserPipelineResult {
+  /** Count of unique (by URL) jobs scraped across all sources. */
+  scraped: number;
+  upserted: JobPosting[];
+}

@@ -7,9 +7,22 @@ import { getPresignedUrlFunctions } from './src/modules/cvModule/getPresignedUrl
 import { parseCvPdfFunctions } from './src/modules/cvModule/parseCvPdf';
 import { getCustom } from './src/serverless/configs/serverless-common.config';
 import { getCvBucketResources } from './src/serverless/resources/cv-bucket';
+import { getJobsTableResources } from './src/serverless/resources/jobs-table';
 
 const Custom = getCustom();
-const Resources = getCvBucketResources();
+const cvBucketResources = getCvBucketResources();
+const jobsTableResources = getJobsTableResources();
+const Resources: AWS['resources'] = {
+  ...cvBucketResources,
+  Resources: {
+    ...cvBucketResources.Resources,
+    ...jobsTableResources.Resources,
+  },
+  Outputs: {
+    ...cvBucketResources.Outputs,
+    ...jobsTableResources.Outputs,
+  },
+};
 
 /**
  * Job Scout API — Serverless Framework init stack.
@@ -67,6 +80,9 @@ const serverlessConfiguration: AWS = {
       USERS_TABLE_NAME: {
         Ref: 'UsersTable',
       },
+      JOBS_TABLE_NAME: {
+        Ref: 'JobsTable',
+      },
     },
     // Merged into the default Lambda execution role, which keeps its
     // CloudWatch Logs grants.
@@ -100,6 +116,13 @@ const serverlessConfiguration: AWS = {
              Action: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
              Resource: {
                'Fn::GetAtt': ['UsersTable', 'Arn'],
+             },
+           },
+           {
+             Effect: 'Allow',
+             Action: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
+             Resource: {
+               'Fn::GetAtt': ['JobsTable', 'Arn'],
              },
            },
         ],
