@@ -6,7 +6,6 @@ import { TargetRolesCard } from './TargetRolesCard';
 import { PreferencesCard } from './PreferencesCard';
 import { useUserProfile } from '@/features/profile/context/UserProfileContext';
 import { updateProfile, type UserProfileData } from '@/lib/api/profileService';
-import { SkillsSection } from './SkillsSection';
 
 export function ProfileView() {
   const { profile, refresh } = useUserProfile();
@@ -14,9 +13,6 @@ export function ProfileView() {
   const [toastMessage, setToastMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  // Get skills from profile.cvProfile.skills
-  const skills = profile?.cvProfile?.skills || [];
 
   const handleSave = async (updatedSkills?: string[]) => {
     setIsSaving(true);

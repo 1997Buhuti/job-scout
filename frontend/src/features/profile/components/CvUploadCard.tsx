@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { useUserProfile } from '@/features/profile/context/UserProfileContext';
 import { processCvUpload } from '@/features/cv/api/processCvUpload';
@@ -25,6 +26,7 @@ const initialSkills = [
 ];
 
 export function CvUploadCard() {
+  const router = useRouter();
   const { refresh } = useUserProfile();
   const [skills, setSkills] = useState(initialSkills);
   const [newSkillInput, setNewSkillInput] = useState('');
@@ -67,11 +69,6 @@ export function CvUploadCard() {
 
   const handleRemoveSkill = (skillName: string) => {
     setSkills(skills.filter((s) => s.name !== skillName));
-  };
-
-  const handleAddSkillSubmit = () => {
-    setIsAddingSkill(false);
-    setNewSkillInput('');
   };
 
   return (
@@ -168,7 +165,7 @@ export function CvUploadCard() {
             </span>
             <button
               type="button"
-              onClick={() => window.location.href = '/profile'}
+              onClick={() => router.push('/profile')}
               className="ml-auto rounded bg-secondary px-2 py-1 text-xs font-medium text-on-secondary"
             >
               View Profile

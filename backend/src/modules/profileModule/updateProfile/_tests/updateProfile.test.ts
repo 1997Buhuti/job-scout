@@ -12,7 +12,7 @@ import {
   updateProfile,
 } from '@modules/profileModule/updateProfile/updateProfile';
 import type { UserProfile } from '@modules/profileModule/getProfile/types';
-import type { CvExperience } from '@modules/cvModule/parseCvPdf/types';
+import type { CvExperience, CvEducation } from '@modules/cvModule/parseCvPdf/types';
 
 const updateMock = jest.fn();
 const getMock = jest.fn();
@@ -214,8 +214,8 @@ describe('updateProfile', () => {
   it('updates both targetRoles and cvProfile together', async () => {
     const mockCvProfile = {
       skills: ['TypeScript', 'AWS'],
-      experience: [],
-      education: [],
+      experience: [] as CvExperience[],
+      education: [] as CvEducation[],
       extractedAt: '2025-01-14T00:00:00.000Z',
       sourceCvS3Key: 'cvs/sub-123/test.pdf',
     };
