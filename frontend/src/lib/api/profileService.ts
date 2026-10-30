@@ -7,6 +7,25 @@ export interface UserProfileData {
   email: string;
   targetRoles: string[];
   cvS3Key?: string;
+  cvProfile?: {
+    skills: string[];
+    experience: Array<{
+      title: string;
+      company: string;
+      period?: string;
+      summary?: string;
+    }>;
+    education: Array<{
+      institution: string;
+      degree?: string;
+      field?: string;
+      year?: string;
+    }>;
+    fullName?: string;
+    summary?: string;
+    extractedAt: string;
+    sourceCvS3Key: string;
+  };
   scheduleIntervalDays: number;
   schedulerEnabled: boolean;
   lastRunAt?: string;

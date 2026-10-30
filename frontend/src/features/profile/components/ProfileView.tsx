@@ -2,32 +2,50 @@
 
 import { useState } from 'react';
 import { CvUploadCard } from './CvUploadCard';
-import { CognitoAccountCard } from './CognitoAccountCard';
 import { TargetRolesCard } from './TargetRolesCard';
 import { PreferencesCard } from './PreferencesCard';
 import { useUserProfile } from '@/features/profile/context/UserProfileContext';
-import { updateProfile } from '@/lib/api/profileService';
+import { updateProfile, type UserProfileData } from '@/lib/api/profileService';
 
 export function ProfileView() {
-  const { refresh } = useUserProfile();
+  const { profile, refresh } = useUserProfile();
   const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('DynamoDB item updated & S3 lock verified.');
+  const [toastMessage, setToastMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const handleSave = async () => {
+  const handleSave = async (updatedSkills?: string[]) => {
     setIsSaving(true);
+    setSaveError(null);
     try {
+      // Build profile update payload
+      const payload: Partial<UserProfileData> = {
+        targetRoles: profile?.targetRoles || [],
+      };
+      
+      // Include cvProfile with skills if provided
+      if (updatedSkills !== undefined) {
+        payload.cvProfile = {
+          skills: updatedSkills,
+          experience: profile?.cvProfile?.experience || [],
+          education: profile?.cvProfile?.education || [],
+          extractedAt: profile?.cvProfile?.extractedAt || new Date().toISOString(),
+          sourceCvS3Key: profile?.cvProfile?.sourceCvS3Key || '',
+        };
+      }
+
       // Call PUT /me/profile endpoint
-      await updateProfile({});
+      await updateProfile(payload);
       await refresh(true);
-      setToastMessage('DynamoDB profile updated via PUT /me/profile.');
+      setToastMessage(updatedSkills ? 'Skills saved successfully' : 'Profile updated successfully');
       setShowToast(true);
       setTimeout(() => {
         setShowToast(false);
       }, 4000);
     } catch (err) {
       console.error('Error saving profile:', err);
-      setToastMessage('Saved locally (API endpoint sync attempted).');
+      setSaveError(err instanceof Error ? err.message : 'Save failed. Please try again.');
+      setToastMessage(saveError || 'Save failed. Please try again.');
       setShowToast(true);
       setTimeout(() => {
         setShowToast(false);
@@ -36,7 +54,6 @@ export function ProfileView() {
       setIsSaving(false);
     }
   };
-
 
   return (
     <div className="flex flex-col w-full pb-12">
@@ -62,7 +79,7 @@ export function ProfileView() {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 w-full md:w-auto">
           <button
             type="button"
-            onClick={() => alert('Version history history modal placeholder')}
+            onClick={() => alert('Version history modal placeholder')}
             className="flex items-center gap-2 rounded-lg bg-surface-container-high px-4 py-2.5 text-sm font-medium text-on-surface hover:bg-surface-bright transition-colors"
           >
             <span className="material-symbols-outlined text-[18px]">
@@ -73,14 +90,14 @@ export function ProfileView() {
 
           <button
             type="button"
-            onClick={handleSave}
+            onClick={() => handleSave()}
             disabled={isSaving}
             className="relative flex items-center justify-center gap-2 overflow-hidden rounded-lg bg-secondary px-5 py-2.5 text-sm font-medium text-on-secondary shadow-[0_0_20px_rgba(78,222,163,0.3)] hover:bg-secondary-fixed transition-all disabled:opacity-75"
           >
             <span className={`material-symbols-outlined text-[18px] ${isSaving ? 'animate-spin' : ''}`}>
               {isSaving ? 'sync' : 'cloud_sync'}
             </span>
-            {isSaving ? 'Syncing...' : 'Save Profile & Sync DynamoDB'}
+            {isSaving ? 'Syncing...' : 'Save Profile'}
           </button>
         </div>
       </div>
@@ -90,7 +107,6 @@ export function ProfileView() {
         {/* Left Column (7 Cols) */}
         <div className="flex flex-col gap-6 lg:col-span-7">
           <CvUploadCard />
-          <CognitoAccountCard />
         </div>
 
         {/* Right Column (5 Cols) */}

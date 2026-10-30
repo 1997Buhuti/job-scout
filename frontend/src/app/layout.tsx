@@ -36,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
       className={`dark ${geistSans.variable} ${jetbrainsMono.variable}`}
     >
       <head>
+        {/* eslint-disable-next-line @next/next/no-page-custom-font -- no next/font equivalent for Material Symbols; loaded globally for all pages in the root layout */}
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
           rel="stylesheet"
