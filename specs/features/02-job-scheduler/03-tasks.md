@@ -8,7 +8,7 @@
 
 ## Backend setup
 
-- [ ] **B1.** Extend `UserProfile` persistence with `scheduleIntervalDays` (1–30), `schedulerEnabled`, `lastRunAt`, `nextRunAt`, and users GSI1 (`SCHED#true` / `NEXT#{nextRunAt}`) per `specs/02-database-schema.md`.
+- [x] **B1.** Extend `UserProfile` persistence with `scheduleIntervalDays` (1–30), `schedulerEnabled`, `lastRunAt`, `nextRunAt`, and users GSI1 (`SCHED#true` / `NEXT#{nextRunAt}`) per `specs/02-database-schema.md`.
 - [ ] **B2.** Implement `PUT /me/schedule` (`updateSchedule`): Cognito auth, validate interval, persist fields, set `nextRunAt` when enabling.
 - [ ] **B3.** Add EventBridge schedule on Serverless Framework v3 (shared tick, not per-user) invoking `schedulerDispatcher`.
 - [ ] **B4.** Implement `schedulerDispatcher`: query due enabled users with CV + target roles; invoke `runUserPipeline` per due user.

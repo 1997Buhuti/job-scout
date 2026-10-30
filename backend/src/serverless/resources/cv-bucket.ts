@@ -71,11 +71,43 @@ export const getCvBucketResources = (): AWS['resources'] => ({
             AttributeName: 'userId',
             AttributeType: 'S',
           },
+          // Sparse overloaded GSI attributes for the scheduler dispatcher.
+          // Only written when a user is eligible for scheduling, so the
+          // index stays small (see specs/02-database-schema.md).
+          {
+            AttributeName: 'gsi1pk',
+            AttributeType: 'S',
+          },
+          {
+            AttributeName: 'gsi1sk',
+            AttributeType: 'S',
+          },
         ],
         KeySchema: [
           {
             AttributeName: 'userId',
             KeyType: 'HASH',
+          },
+        ],
+        GlobalSecondaryIndexes: [
+          {
+            // gsi1pk = `SCHED#{schedulerEnabled}` (e.g. `SCHED#true`)
+            // gsi1sk = `NEXT#{nextRunAt}`
+            // Lets the dispatcher list due users without a table scan.
+            IndexName: 'GSI1',
+            KeySchema: [
+              {
+                AttributeName: 'gsi1pk',
+                KeyType: 'HASH',
+              },
+              {
+                AttributeName: 'gsi1sk',
+                KeyType: 'RANGE',
+              },
+            ],
+            Projection: {
+              ProjectionType: 'ALL',
+            },
           },
         ],
         BillingMode: 'PAY_PER_REQUEST',
