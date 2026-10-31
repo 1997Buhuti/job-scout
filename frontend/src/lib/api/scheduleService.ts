@@ -46,8 +46,11 @@ export async function updateSchedule(
       throw new Error(message);
     }
 
-    const data = await res.json();
-    return data as UserProfileData;
+    const body = (await res.json()) as { data?: UserProfileData };
+    if (!body?.data) {
+      throw new Error('Unexpected response from the schedule endpoint');
+    }
+    return body.data;
   } catch (err) {
     console.error('[Schedule API] Error updating schedule:', err);
     throw err;
