@@ -19,8 +19,10 @@
     "node": ">=24.0.0"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1145.0",
     "@aws-sdk/client-dynamodb": "^3.1145.0",
     "@aws-sdk/client-s3": "^3.1145.0",
+    "@aws-sdk/client-ses": "^3.1145.0",
     "@aws-sdk/lib-dynamodb": "^3.1145.0",
     "@aws-sdk/s3-request-presigner": "^3.1145.0",
     "@middy/core": "^7.7.2",
@@ -28,7 +30,9 @@
     "@middy/http-event-normalizer": "^7.7.2",
     "@middy/http-header-normalizer": "^7.7.2",
     "@middy/http-json-body-parser": "^7.7.2",
-    "@middy/http-security-headers": "^7.7.2"
+    "@middy/http-security-headers": "^7.7.2",
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

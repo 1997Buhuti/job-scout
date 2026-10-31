@@ -21,8 +21,8 @@ Status key: `[ ]` not started, `[x]` done. Task IDs: **D** = docs, **B** = backe
 
 ## P — Pipeline filter
 
-- [ ] **P1.** Create a pure filter module with `matchesExcludedKeyword`, `matchesWorkMode`, and `filterJobsForUser`. Keyword match is case-insensitive and whole-word on title and description. Work mode drops only known, unselected modes. Does not read salary.
-- [ ] **P2.** Unit tests for P1. Covers AC-8 and AC-9 (unknown work mode is kept), and AC-11 (salary has no effect).
+- [x] **P1.** Create a pure filter module with `matchesExcludedKeyword`, `matchesWorkMode`, and `filterJobsForUser`. Keyword match is case-insensitive and whole-word on title and description. Work mode drops only known, unselected modes. Does not read salary.
+- [x] **P2.** Unit tests for P1. Covers AC-8 and AC-9 (unknown work mode is kept), and AC-11 (salary has no effect).
 - [ ] **P3.** Wire `filterJobsForUser` into `runUserPipeline` after scraping and before Bedrock, reading preferences from the profile at run start. Blocked until scheduler tasks B1 to B10 in `02-job-scheduler` exist.
 - [ ] **P4.** Confirm `targetRoles` drives the search query and changing them changes results on the next run. Covers AC-10. Blocked on the same scheduler work as P3.
 

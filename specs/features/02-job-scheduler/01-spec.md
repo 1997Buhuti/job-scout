@@ -25,11 +25,8 @@ Users should not have to trigger scrapes by hand. Job Scout must run scrape → 
 
 ### FR-1 — User-configured interval
 
-- The user sets `scheduleIntervalDays`: integer **1–30** inclusive.
-  - **1** = daily (minimum).
-  - **30** = monthly (maximum for MVP; 30-day month, not calendar-month end).
-- UI may offer presets (Daily = 1, Weekly = 7, Monthly = 30) plus a custom value in range.
-- Values outside 1–30 are rejected (`400`).
+- The user sets `scheduleIntervalDays` to one of three presets: **1** (Daily), **7** (Weekly), or **30** (Monthly). No custom/arbitrary value is accepted.
+- Values outside `[1, 7, 30]` are rejected (`400`), matching the existing `ALLOWED_SCHEDULE_INTERVAL_DAYS` convention used by `updateProfile`.
 - The user can enable or disable the scheduler (`schedulerEnabled`).
 
 ### FR-2 — Automatic runs
@@ -73,7 +70,7 @@ Users should not have to trigger scrapes by hand. Job Scout must run scrape → 
 
 | ID | Criterion |
 | --- | --- |
-| AC-1 | User can save `scheduleIntervalDays` in 1–30; 0 and 31 are rejected. |
+| AC-1 | User can save `scheduleIntervalDays` as 1, 7, or 30; any other value (e.g. 0, 5, 31) is rejected. |
 | AC-2 | User can toggle `schedulerEnabled`. |
 | AC-3 | A due user (`nextRunAt` in the past, enabled, CV + roles present) is processed by the dispatcher. |
 | AC-4 | After a run, `nextRunAt` is at least `scheduleIntervalDays` days after `lastRunAt`. |
