@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { CvUploadCard } from './CvUploadCard';
 import { TargetRolesCard } from './TargetRolesCard';
 import { PreferencesCard } from './PreferencesCard';
+import { ScheduleSettingsCard } from './ScheduleSettingsCard';
 import { useUserProfile } from '@/features/profile/context/UserProfileContext';
 import { updateProfile, type UserProfileData } from '@/lib/api/profileService';
 
@@ -113,6 +114,7 @@ export function ProfileView() {
         <div className="flex flex-col gap-6 lg:col-span-5">
           <TargetRolesCard />
           <PreferencesCard />
+          <ScheduleSettingsCard />
         </div>
       </div>
 
