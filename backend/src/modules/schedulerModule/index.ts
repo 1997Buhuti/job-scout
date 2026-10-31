@@ -20,4 +20,18 @@ export const schedulerFunctions: AWS['functions'] = {
       },
     ],
   },
+  // B3/B4: one shared EventBridge tick dispatches every due user — never a
+  // per-user AWS::Events::Rule.
+  schedulerDispatcher: {
+    handler: 'src/modules/schedulerModule/dispatcher/handler.main',
+    timeout: 300,
+    memorySize: 1024,
+    events: [
+      {
+        schedule: {
+          rate: ['rate(1 hour)'],
+        },
+      },
+    ],
+  },
 };

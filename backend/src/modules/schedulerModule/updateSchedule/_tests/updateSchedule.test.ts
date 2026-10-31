@@ -50,14 +50,15 @@ const buildEvent = (
   }) as unknown as APIGatewayProxyEventV2WithJWTAuthorizer;
 
 describe('validateScheduleIntervalDays', () => {
-  it('accepts integers from 1 to 30 (AC-1)', () => {
+  it('accepts only the 1/7/30 presets (AC-1)', () => {
     expect(validateScheduleIntervalDays(1)).toBe(1);
     expect(validateScheduleIntervalDays(7)).toBe(7);
     expect(validateScheduleIntervalDays(30)).toBe(30);
   });
 
-  it('rejects 0 and 31 (AC-1)', () => {
+  it('rejects 0, 14, and 31 (AC-1)', () => {
     expect(() => validateScheduleIntervalDays(0)).toThrow(BadRequestError);
+    expect(() => validateScheduleIntervalDays(14)).toThrow(BadRequestError);
     expect(() => validateScheduleIntervalDays(31)).toThrow(BadRequestError);
   });
 
@@ -98,21 +99,21 @@ describe('updateSchedule', () => {
     }
   });
 
-  it('persists a valid scheduleIntervalDays (AC-1)', async () => {
+  it('persists a valid scheduleIntervalDays preset (AC-1)', async () => {
     updateMock.mockResolvedValue({
       Attributes: {
         userId: 'sub-123',
         email: 'user@example.com',
-        scheduleIntervalDays: 14,
+        scheduleIntervalDays: 7,
         schedulerEnabled: false,
         createdAt: '2025-01-01T00:00:00.000Z',
         updatedAt: '2025-01-14T00:00:00.000Z',
       },
     });
 
-    const result = await updateSchedule(buildEvent('sub-123', { scheduleIntervalDays: 14 }));
+    const result = await updateSchedule(buildEvent('sub-123', { scheduleIntervalDays: 7 }));
 
-    expect(result).toMatchObject({ scheduleIntervalDays: 14 });
+    expect(result).toMatchObject({ scheduleIntervalDays: 7 });
     expect(getMock).not.toHaveBeenCalled();
     expect(updateMock).toHaveBeenCalledTimes(1);
     expect(updateMock.mock.calls[0][0].input).toMatchObject({
@@ -130,6 +131,13 @@ describe('updateSchedule', () => {
     expect(updateMock).not.toHaveBeenCalled();
   });
 
+  it('rejects scheduleIntervalDays of 14 (not a preset) (AC-1)', async () => {
+    await expect(
+      updateSchedule(buildEvent('sub-123', { scheduleIntervalDays: 14 })),
+    ).rejects.toThrow(BadRequestError);
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
   it('rejects scheduleIntervalDays of 31 (AC-1)', async () => {
     await expect(
       updateSchedule(buildEvent('sub-123', { scheduleIntervalDays: 31 })),
@@ -137,7 +145,7 @@ describe('updateSchedule', () => {
     expect(updateMock).not.toHaveBeenCalled();
   });
 
-  it('sets nextRunAt to now when enabling with no prior nextRunAt', async () => {
+  it('sets nextRunAt and gsi1pk/gsi1sk when enabling with no prior nextRunAt', async () => {
     getMock.mockResolvedValue({ Item: { userId: 'sub-123' } });
     updateMock.mockResolvedValue({
       Attributes: {
@@ -156,12 +164,16 @@ describe('updateSchedule', () => {
     expect(getMock).toHaveBeenCalledTimes(1);
     const input = updateMock.mock.calls[0][0].input;
     expect(input.UpdateExpression).toBe(
-      'SET updatedAt = :updatedAt, schedulerEnabled = :schedulerEnabled, nextRunAt = :nextRunAt',
+      'SET updatedAt = :updatedAt, schedulerEnabled = :schedulerEnabled, gsi1pk = :gsi1pk, nextRunAt = :nextRunAt, gsi1sk = :gsi1sk',
     );
     expect(input.ExpressionAttributeValues[':nextRunAt']).toEqual(expect.any(String));
+    expect(input.ExpressionAttributeValues[':gsi1pk']).toBe('SCHED#true');
+    expect(input.ExpressionAttributeValues[':gsi1sk']).toBe(
+      `NEXT#${input.ExpressionAttributeValues[':nextRunAt']}`,
+    );
   });
 
-  it('leaves nextRunAt unchanged when enabling with an existing nextRunAt', async () => {
+  it('leaves nextRunAt unchanged but still refreshes gsi1pk when enabling with an existing nextRunAt', async () => {
     getMock.mockResolvedValue({
       Item: { userId: 'sub-123', nextRunAt: '2025-02-01T00:00:00.000Z' },
     });
@@ -182,13 +194,15 @@ describe('updateSchedule', () => {
     expect(getMock).toHaveBeenCalledTimes(1);
     const input = updateMock.mock.calls[0][0].input;
     expect(input.UpdateExpression).toBe(
-      'SET updatedAt = :updatedAt, schedulerEnabled = :schedulerEnabled',
+      'SET updatedAt = :updatedAt, schedulerEnabled = :schedulerEnabled, gsi1pk = :gsi1pk',
     );
+    expect(input.ExpressionAttributeValues[':gsi1pk']).toBe('SCHED#true');
     expect(input.ExpressionAttributeValues).not.toHaveProperty(':nextRunAt');
+    expect(input.ExpressionAttributeValues).not.toHaveProperty(':gsi1sk');
     expect(result.nextRunAt).toBe('2025-02-01T00:00:00.000Z');
   });
 
-  it('does not look up nextRunAt when disabling the scheduler', async () => {
+  it('does not look up nextRunAt when disabling the scheduler, but still sets gsi1pk', async () => {
     updateMock.mockResolvedValue({
       Attributes: {
         userId: 'sub-123',
@@ -205,8 +219,9 @@ describe('updateSchedule', () => {
     expect(getMock).not.toHaveBeenCalled();
     const input = updateMock.mock.calls[0][0].input;
     expect(input.UpdateExpression).toBe(
-      'SET updatedAt = :updatedAt, schedulerEnabled = :schedulerEnabled',
+      'SET updatedAt = :updatedAt, schedulerEnabled = :schedulerEnabled, gsi1pk = :gsi1pk',
     );
+    expect(input.ExpressionAttributeValues[':gsi1pk']).toBe('SCHED#false');
   });
 
   it('only updates schedulerEnabled when scheduleIntervalDays is absent (partial update)', async () => {

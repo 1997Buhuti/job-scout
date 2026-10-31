@@ -8,19 +8,23 @@ import { parseCvPdfFunctions } from './src/modules/cvModule/parseCvPdf';
 import { getCustom } from './src/serverless/configs/serverless-common.config';
 import { getCvBucketResources } from './src/serverless/resources/cv-bucket';
 import { getJobsTableResources } from './src/serverless/resources/jobs-table';
+import { getMatchesTableResources } from './src/serverless/resources/matches-table';
 
 const Custom = getCustom();
 const cvBucketResources = getCvBucketResources();
 const jobsTableResources = getJobsTableResources();
+const matchesTableResources = getMatchesTableResources();
 const Resources: AWS['resources'] = {
   ...cvBucketResources,
   Resources: {
     ...cvBucketResources.Resources,
     ...jobsTableResources.Resources,
+    ...matchesTableResources.Resources,
   },
   Outputs: {
     ...cvBucketResources.Outputs,
     ...jobsTableResources.Outputs,
+    ...matchesTableResources.Outputs,
   },
 };
 
@@ -83,6 +87,11 @@ const serverlessConfiguration: AWS = {
       JOBS_TABLE_NAME: {
         Ref: 'JobsTable',
       },
+      MATCHES_TABLE_NAME: {
+        Ref: 'MatchesTable',
+      },
+      SES_FROM_ADDRESS: '${env:SES_FROM_ADDRESS, ssm:/job-scout/${sls:stage}/ses-from-address}',
+      BEDROCK_MODEL_ID: '${env:BEDROCK_MODEL_ID, ssm:/job-scout/${sls:stage}/bedrock-model-id}',
     },
     // Merged into the default Lambda execution role, which keeps its
     // CloudWatch Logs grants.
@@ -124,6 +133,48 @@ const serverlessConfiguration: AWS = {
              Resource: {
                'Fn::GetAtt': ['JobsTable', 'Arn'],
              },
+           },
+           {
+             Effect: 'Allow',
+             Action: [
+               'dynamodb:GetItem',
+               'dynamodb:BatchGetItem',
+               'dynamodb:PutItem',
+               'dynamodb:UpdateItem',
+               'dynamodb:Query',
+             ],
+             Resource: [
+               { 'Fn::GetAtt': ['MatchesTable', 'Arn'] },
+               {
+                 'Fn::Join': [
+                   '',
+                   [{ 'Fn::GetAtt': ['MatchesTable', 'Arn'] }, '/index/GSI1'],
+                 ],
+               },
+             ],
+           },
+           {
+             Effect: 'Allow',
+             Action: ['dynamodb:Query'],
+             Resource: {
+               'Fn::Join': [
+                 '',
+                 [{ 'Fn::GetAtt': ['UsersTable', 'Arn'] }, '/index/GSI1'],
+               ],
+             },
+           },
+           {
+             Effect: 'Allow',
+             Action: ['bedrock:InvokeModel'],
+             Resource:
+               'arn:aws:bedrock:${aws:region}::foundation-model/anthropic.claude-3-haiku-20240307-v1:0',
+           },
+           {
+             Effect: 'Allow',
+             Action: ['ses:SendEmail', 'ses:SendRawEmail'],
+             // SES identities aren't modeled as CFN resources here (MVP);
+             // scope down to a verified-identity ARN once SES is set up.
+             Resource: '*',
            },
         ],
       },

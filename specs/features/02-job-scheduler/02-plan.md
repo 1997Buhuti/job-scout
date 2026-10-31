@@ -56,7 +56,7 @@ backend/src/modules/schedulerModule/
 | Trigger | API Gateway `PUT /me/schedule` |
 | Auth | Cognito JWT; `userId` = Sub |
 | Input | `{ scheduleIntervalDays: number, schedulerEnabled: boolean }` |
-| Logic | Clamp/validate 1–30 integer → `UpdateItem` → if enabling and no `nextRunAt`, set `nextRunAt` to now (eligible on next tick) or now + interval (defer first run — **MVP: set nextRunAt to now** so first enabled save can run on the next tick) |
+| Logic | Validate `scheduleIntervalDays` is one of `[1, 7, 30]` (reuse `ALLOWED_SCHEDULE_INTERVAL_DAYS` from `updateProfile`) → `UpdateItem` → if enabling and no `nextRunAt`, set `nextRunAt` to now (eligible on next tick) or now + interval (defer first run — **MVP: set nextRunAt to now** so first enabled save can run on the next tick) |
 | Output | `200` updated profile scheduler fields |
 | Errors | `400` invalid interval; `401` unauthenticated |
 
@@ -99,7 +99,7 @@ Align with [../../02-database-schema.md](../../02-database-schema.md):
 | Piece | Detail |
 | --- | --- |
 | Page | Profile / settings: “Job search schedule” |
-| Controls | Enable toggle; presets Daily / Weekly / Monthly; optional number input 1–30 |
+| Controls | Enable toggle; presets Daily (1) / Weekly (7) / Monthly (30) only — no custom number input |
 | Copy | Explain that already suggested jobs are never emailed again |
 | API | Authenticated `PUT /me/schedule` |
 | Location | e.g. `frontend/src/components/schedule/ScheduleSettings.tsx` |

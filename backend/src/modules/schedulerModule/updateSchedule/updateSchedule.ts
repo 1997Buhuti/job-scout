@@ -16,8 +16,9 @@ import type { UserProfile } from '@modules/profileModule/getProfile/types';
 import type { UpdateScheduleRequest } from './types';
 
 const USERS_TABLE_ENV_KEY = 'USERS_TABLE_NAME';
-const MIN_SCHEDULE_INTERVAL_DAYS = 1;
-const MAX_SCHEDULE_INTERVAL_DAYS = 30;
+// Duplicated from updateProfile.ts's convention (do not import across
+// modules) — scheduleIntervalDays is restricted to these presets everywhere.
+const ALLOWED_SCHEDULE_INTERVAL_DAYS: readonly number[] = [1, 7, 30];
 
 const ddbClient = new DynamoDBClient({ region: 'us-east-1' });
 const docClient = DynamoDBDocumentClient.from(ddbClient);
@@ -35,13 +36,9 @@ const resolveUsersTable = (): string => {
 export const validateScheduleIntervalDays = (value: unknown): number => {
   if (
     typeof value !== 'number' ||
-    !Number.isInteger(value) ||
-    value < MIN_SCHEDULE_INTERVAL_DAYS ||
-    value > MAX_SCHEDULE_INTERVAL_DAYS
+    !ALLOWED_SCHEDULE_INTERVAL_DAYS.includes(value)
   ) {
-    throw new BadRequestError(
-      `scheduleIntervalDays must be an integer from ${MIN_SCHEDULE_INTERVAL_DAYS} to ${MAX_SCHEDULE_INTERVAL_DAYS}`,
-    );
+    throw new BadRequestError('scheduleIntervalDays must be 1, 7, or 30');
   }
   return value;
 };
@@ -81,8 +78,9 @@ export const updateSchedule = async (
 
   if (schedulerEnabled !== undefined) {
     const validatedSchedulerEnabled = validateSchedulerEnabled(schedulerEnabled);
-    updateExpression += ', schedulerEnabled = :schedulerEnabled';
+    updateExpression += ', schedulerEnabled = :schedulerEnabled, gsi1pk = :gsi1pk';
     expressionAttributeValues[':schedulerEnabled'] = validatedSchedulerEnabled;
+    expressionAttributeValues[':gsi1pk'] = `SCHED#${validatedSchedulerEnabled}`;
 
     if (validatedSchedulerEnabled) {
       // MVP: when enabling and there is no nextRunAt yet, make the user
@@ -96,8 +94,10 @@ export const updateSchedule = async (
       );
 
       if (!getResult.Item?.nextRunAt) {
-        updateExpression += ', nextRunAt = :nextRunAt';
-        expressionAttributeValues[':nextRunAt'] = new Date().toISOString();
+        const nextRunAt = new Date().toISOString();
+        updateExpression += ', nextRunAt = :nextRunAt, gsi1sk = :gsi1sk';
+        expressionAttributeValues[':nextRunAt'] = nextRunAt;
+        expressionAttributeValues[':gsi1sk'] = `NEXT#${nextRunAt}`;
       }
     }
   }

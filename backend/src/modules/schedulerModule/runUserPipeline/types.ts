@@ -56,3 +56,19 @@ export interface RunUserPipelineResult {
   scraped: number;
   upserted: JobPosting[];
 }
+
+/**
+ * Verbatim from `specs/02-database-schema.md` §3. `partitionKey` is also
+ * the DynamoDB `PK` value (`${userId}#${jobId}`).
+ */
+export interface MatchResult {
+  partitionKey: string;
+  userId: string;
+  jobId: string;
+  matchScore: number; // 0-100
+  reasoning: string;
+  matchingSkills: string[];
+  /** ISO-8601 when included in an SES digest; undefined if not yet sent */
+  sentAt?: string;
+  evaluatedAt: string; // ISO-8601
+}
