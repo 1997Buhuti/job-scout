@@ -34,11 +34,18 @@ describe('advanceUserSchedule', () => {
     }
   });
 
-  it.each([1, 7, 30])('sets nextRunAt exactly %d day(s) after lastRunAt', async (days) => {
-    const result = await advanceUserSchedule('user-1', days);
-
-    const expectedMs = Date.parse(result.lastRunAt) + days * 24 * 60 * 60 * 1000;
-    expect(Date.parse(result.nextRunAt)).toBe(expectedMs);
+  it.each([
+    [1, '2025-01-15T20:00:00.000Z', '2025-01-16T18:30:00.000Z'], // Thu 01:30 IST -> Fri 17 Jan 00:00 IST
+    [7, '2025-01-15T20:00:00.000Z', '2025-01-19T18:30:00.000Z'], // Thu 01:30 IST -> Mon 20 Jan 00:00 IST
+    [30, '2025-01-15T20:00:00.000Z', '2025-01-31T18:30:00.000Z'], // -> 1 Feb 00:00 IST
+  ])('sets nextRunAt for interval %d to the next IST boundary', async (days, now, expected) => {
+    jest.useFakeTimers().setSystemTime(new Date(now));
+    try {
+      const result = await advanceUserSchedule('user-1', days);
+      expect(result.nextRunAt).toBe(expected);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('refreshes gsi1sk to NEXT#{nextRunAt} and sets lastRunAt/updatedAt', async () => {

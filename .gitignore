@@ -56,3 +56,6 @@ frontend/.env.example
 
 # Documentation
 docs
+# AI agent scratch files and local git worktrees
+/.agents/
+/.worktrees/
