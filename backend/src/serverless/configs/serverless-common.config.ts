@@ -6,7 +6,7 @@ export const getCustom = (): AWS['custom'] => {
       bundle: true,
       minify: false,
       sourcemap: false,
-      exclude: ['@aws-sdk/*'],
+      exclude: [],
       target: 'node24',
       define: { 'require.resolve': undefined },
       platform: 'node',
