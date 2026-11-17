@@ -3,14 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/copy-pdf-worker.mjs",
+    "predev": "node scripts/copy-pdf-worker.mjs && node scripts/ensure-amplify-outputs.mjs",
     "dev": "next dev --port 3001",
-    "prebuild": "node scripts/copy-pdf-worker.mjs",
+    "prebuild": "node scripts/copy-pdf-worker.mjs && node scripts/ensure-amplify-outputs.mjs",
     "build": "next build",
     "start": "next start --port 3001",
     "lint": "eslint",
     "test": "jest",
-    "amplify:sandbox": "npx ampx sandbox --outputs-out-dir ."
+    "amplify:sandbox": "npx ampx sandbox --outputs-out-dir .",
+    "amplify:outputs": "npx ampx generate outputs --out-dir ."
   },
   "dependencies": {
     "@aws-amplify/adapter-nextjs": "^1.8.0",

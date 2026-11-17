@@ -23,9 +23,9 @@
 
 ## Frontend UI integration
 
-- [ ] **F1.** Add schedule settings UI: enable toggle, Daily / Weekly / Monthly presets (1 / 7 / 30) only — no custom day input — validation errors.
-- [ ] **F2.** Wire authenticated `PUT /me/schedule` and show saved interval + next-run copy.
-- [ ] **F3.** End-to-end: save daily schedule, confirm profile fields; confirm UI copy that previously suggested jobs are not repeated.
+- [x] **F1.** Add schedule settings UI: enable toggle, Daily / Weekly / Monthly presets (1 / 7 / 30) only — no custom day input — validation errors.
+- [x] **F2.** Wire authenticated `PUT /me/schedule` and show saved interval + next-run copy.
+- [x] **F3.** End-to-end: save daily schedule, confirm profile fields; confirm UI copy that previously suggested jobs are not repeated.
 
 ---
 

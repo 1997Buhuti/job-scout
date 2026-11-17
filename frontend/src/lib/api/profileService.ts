@@ -48,8 +48,8 @@ export async function getProfile(): Promise<UserProfileData | null> {
       return null;
     }
 
-    const data = await res.json();
-    return data as UserProfileData;
+    const body = (await res.json()) as { data?: UserProfileData };
+    return body?.data ?? null;
   } catch (err) {
     console.error('[Profile API] Error fetching profile:', err);
     return null;
