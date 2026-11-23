@@ -1,6 +1,9 @@
 import { fetchAuthSession, fetchUserAttributes, getCurrentUser } from 'aws-amplify/auth';
 
-import type { UserProfileData } from '@/features/profile/types/userProfile';
+import type {
+  UpdateProfilePayload,
+  UserProfileData,
+} from '@/features/profile/types/userProfile';
 
 import { getApiBaseUrl } from './config';
 
@@ -57,11 +60,12 @@ export async function getProfile(): Promise<UserProfileData | null> {
 }
 
 /**
- * Update user profile targetRoles via PUT /me/profile endpoint.
+ * Update the caller's profile via PUT /me/profile.
+ * Resolves with the profile the backend stored, so callers can show exactly what was saved.
  */
 export async function updateProfile(
-  payload: Partial<UserProfileData>
-): Promise<UserProfileData | null> {
+  payload: UpdateProfilePayload,
+): Promise<UserProfileData> {
   try {
     const token = await getIdToken();
     const headers: Record<string, string> = {
@@ -78,11 +82,17 @@ export async function updateProfile(
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to update profile (${res.status})`);
+      const body = await res.json().catch(() => null);
+      const message =
+        body?.error?.message ?? `Failed to update profile (${res.status})`;
+      throw new Error(message);
     }
 
-    const data = await res.json();
-    return data as UserProfileData;
+    const body = (await res.json()) as { data?: UserProfileData };
+    if (!body?.data) {
+      throw new Error('Unexpected response from the profile endpoint');
+    }
+    return body.data;
   } catch (err) {
     console.error('[Profile API] Error updating profile:', err);
     throw err;

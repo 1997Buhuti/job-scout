@@ -60,4 +60,36 @@ describe('runUserPipeline', () => {
     expect(result).toEqual({ scraped: 0, upserted: [] });
     expect(upsert).not.toHaveBeenCalled();
   });
+
+  it('continues when one portal fails and another returns jobs', async () => {
+    const failedSource: ScraperSource = Object.assign(
+      jest.fn().mockRejectedValue(new Error('portal unavailable')),
+      { sourceSite: 'rooster.jobs' as const },
+    );
+    const workingSource: ScraperSource = Object.assign(
+      jest.fn().mockResolvedValue([jobA]),
+      { sourceSite: 'topjobs.lk' as const },
+    );
+    const upsert = jest.fn(async (job: ScrapedJob): Promise<JobPosting> => ({
+      ...job,
+      jobId: 'id-a',
+      scrapedAt: '2024-01-01T00:00:00.000Z',
+    }));
+
+    const result = await runUserPipeline(['Software Engineer'], {
+      sources: [failedSource, workingSource],
+      upsert,
+    });
+
+    expect(result.scraped).toBe(1);
+    expect(upsert).toHaveBeenCalledWith(jobA);
+  });
+
+  it('fails the run when every configured portal fails', async () => {
+    const source: ScraperSource = jest.fn().mockRejectedValue(new Error('offline'));
+
+    await expect(runUserPipeline(['Software Engineer'], { sources: [source] })).rejects.toThrow(
+      'All configured job portal scrapers failed',
+    );
+  });
 });

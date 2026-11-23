@@ -6,24 +6,39 @@ import { TargetRolesCard } from './TargetRolesCard';
 import { PreferencesCard } from './PreferencesCard';
 import { ScheduleSettingsCard } from './ScheduleSettingsCard';
 import { useUserProfile } from '@/features/profile/context/UserProfileContext';
-import { updateProfile, type UserProfileData } from '@/lib/api/profileService';
+import { useProfilePreferences } from '@/features/profile/hooks/useProfilePreferences';
+import type { UpdateProfilePayload } from '@/features/profile/types/userProfile';
+import { toPreferences } from '@/features/profile/utils/preferences';
+import { updateProfile } from '@/lib/api/profileService';
 
 export function ProfileView() {
   const { profile, refresh } = useUserProfile();
+  const { values: prefs, isReady, update, commit } = useProfilePreferences(profile);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const showStatus = (message: string) => {
+    setToastMessage(message);
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+    }, 4000);
+  };
 
   const handleSave = async (updatedSkills?: string[]) => {
+    if (!prefs) return;
+
     setIsSaving(true);
-    setSaveError(null);
     try {
-      // Build profile update payload
-      const payload: Partial<UserProfileData> = {
-        targetRoles: profile?.targetRoles || [],
+      // Every card's values go out together, so the saved profile matches what is on screen.
+      const payload: UpdateProfilePayload = {
+        targetRoles: prefs.targetRoles,
+        excludedKeywords: prefs.excludedKeywords,
+        workModes: prefs.workModes,
+        minMonthlySalaryLkr: prefs.minMonthlySalaryLkr,
       };
-      
+
       // Include cvProfile with skills if provided
       if (updatedSkills !== undefined) {
         payload.cvProfile = {
@@ -35,26 +50,20 @@ export function ProfileView() {
         };
       }
 
-      // Call PUT /me/profile endpoint
-      await updateProfile(payload);
+      const saved = await updateProfile(payload);
+      // Show what the backend stored, including normalized values such as lowercased keywords.
+      commit(toPreferences(saved));
       await refresh(true);
-      setToastMessage(updatedSkills ? 'Skills saved successfully' : 'Profile updated successfully');
-      setShowToast(true);
-      setTimeout(() => {
-        setShowToast(false);
-      }, 4000);
+      showStatus(updatedSkills ? 'Skills saved successfully' : 'Profile updated successfully');
     } catch (err) {
       console.error('Error saving profile:', err);
-      setSaveError(err instanceof Error ? err.message : 'Save failed. Please try again.');
-      setToastMessage(saveError || 'Save failed. Please try again.');
-      setShowToast(true);
-      setTimeout(() => {
-        setShowToast(false);
-      }, 4000);
+      showStatus(err instanceof Error ? err.message : 'Save failed. Please try again.');
     } finally {
       setIsSaving(false);
     }
   };
+
+  const cardsDisabled = !isReady || isSaving;
 
   return (
     <div className="flex flex-col w-full pb-12">
@@ -92,7 +101,7 @@ export function ProfileView() {
           <button
             type="button"
             onClick={() => handleSave()}
-            disabled={isSaving}
+            disabled={isSaving || !isReady}
             className="relative flex items-center justify-center gap-2 overflow-hidden rounded-lg bg-secondary px-5 py-2.5 text-sm font-medium text-on-secondary shadow-[0_0_20px_rgba(78,222,163,0.3)] hover:bg-secondary-fixed transition-all disabled:opacity-75"
           >
             <span className={`material-symbols-outlined text-[18px] ${isSaving ? 'animate-spin' : ''}`}>
@@ -112,8 +121,20 @@ export function ProfileView() {
 
         {/* Right Column (5 Cols) */}
         <div className="flex flex-col gap-6 lg:col-span-5">
-          <TargetRolesCard />
-          <PreferencesCard />
+          <TargetRolesCard
+            targetRoles={prefs?.targetRoles ?? []}
+            excludedKeywords={prefs?.excludedKeywords ?? []}
+            disabled={cardsDisabled}
+            onTargetRolesChange={(targetRoles) => update({ targetRoles })}
+            onExcludedKeywordsChange={(excludedKeywords) => update({ excludedKeywords })}
+          />
+          <PreferencesCard
+            minMonthlySalaryLkr={prefs?.minMonthlySalaryLkr ?? null}
+            workModes={prefs?.workModes ?? []}
+            disabled={cardsDisabled}
+            onMinMonthlySalaryChange={(minMonthlySalaryLkr) => update({ minMonthlySalaryLkr })}
+            onWorkModesChange={(workModes) => update({ workModes })}
+          />
           <ScheduleSettingsCard />
         </div>
       </div>

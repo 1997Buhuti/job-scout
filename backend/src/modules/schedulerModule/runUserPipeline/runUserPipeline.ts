@@ -1,6 +1,11 @@
-import { scrapeTopJobs } from './scrapeJobs';
+import { SCHEDULER_SERVICE } from '@common/constants';
+import { Logger } from '@common/logger';
+
+import { createDefaultScraperSources } from './scrapers';
 import type { JobPosting, RunUserPipelineResult, ScrapedJob, ScraperSource } from './types';
 import { upsertJobPosting } from './upsertJobPosting';
+
+const logger = new Logger(SCHEDULER_SERVICE);
 
 export interface RunUserPipelineDeps {
   sources?: ScraperSource[];
@@ -19,10 +24,37 @@ export const runUserPipeline = async (
   targetRoles: string[],
   deps: RunUserPipelineDeps = {},
 ): Promise<RunUserPipelineResult> => {
-  const sources = deps.sources ?? [scrapeTopJobs()];
+  const sources = deps.sources ?? createDefaultScraperSources();
   const upsert = deps.upsert ?? upsertJobPosting;
 
-  const scrapedBySources = await Promise.all(sources.map((source) => source(targetRoles)));
+  const settledSources = await Promise.allSettled(
+    sources.map((source) => source(targetRoles)),
+  );
+  const successfulSources = settledSources.filter(
+    (result): result is PromiseFulfilledResult<ScrapedJob[]> => result.status === 'fulfilled',
+  );
+
+  settledSources.forEach((result, index) => {
+    const sourceSite = sources[index].sourceSite ?? `source-${index + 1}`;
+    if (result.status === 'rejected') {
+      const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      logger.warn({
+        message: 'Job portal scrape failed; continuing with other portals',
+        data: { sourceSite, error: reason },
+      });
+      return;
+    }
+    logger.info({
+      message: 'Job portal scrape complete',
+      data: { sourceSite, scraped: result.value.length },
+    });
+  });
+
+  if (sources.length > 0 && successfulSources.length === 0) {
+    throw new Error('All configured job portal scrapers failed');
+  }
+
+  const scrapedBySources = successfulSources.map((result) => result.value);
 
   const seenUrls = new Set<string>();
   const uniqueJobs: ScrapedJob[] = [];

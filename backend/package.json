@@ -7,10 +7,10 @@
   "scripts": {
     "dev": "serverless offline start --stage dev",
     "start": "serverless offline start --stage dev",
-    "deploy": "serverless deploy --verbose --stage dev --aws-profile personal_cli_user",
-    "deploy:func": "serverless deploy function --stage dev --verbose --aws-profile personal_cli_user --function",
-    "logs": "serverless logs --stage dev --aws-profile personal_cli_user --function",
-    "package": "serverless package --stage dev --aws-profile personal_cli_user",
+    "deploy": "serverless deploy --verbose --stage dev --aws-profile dev-manakal",
+    "deploy:func": "serverless deploy function --stage dev --verbose --aws-profile dev-manakal --function",
+    "logs": "serverless logs --stage dev --aws-profile dev-manakal --function",
+    "package": "serverless package --stage dev --aws-profile dev-manakal",
     "compile": "tsc --noEmit",
     "test": "jest --config=jest.config.js",
     "lint": "eslint . --max-warnings=0"

@@ -45,3 +45,14 @@ export interface UserProfileData {
   createdAt: string;
   updatedAt: string;
 }
+
+/** The preference fields the profile page edits and saves together. */
+export type ProfilePreferences = Pick<
+  UserProfileData,
+  'targetRoles' | 'excludedKeywords' | 'workModes' | 'minMonthlySalaryLkr'
+>;
+
+/** Body accepted by PUT /me/profile (mirrors backend UpdateProfileRequest). */
+export type UpdateProfilePayload = Partial<
+  ProfilePreferences & Pick<UserProfileData, 'cvProfile'>
+>;
