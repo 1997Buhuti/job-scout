@@ -56,7 +56,7 @@ Scraping is **lightweight only**: `axios` + `cheerio`, or Next.js `__NEXT_DATA__
 | Auth | Amazon Cognito (via Amplify Gen 2) | Cognito Sub = `userId` |
 | Data | Amazon DynamoDB | Single-table or few-table, pay-per-request |
 | Files | Amazon S3 | Presigned uploads for CVs |
-| AI | Amazon Bedrock · `anthropic.claude-3-haiku-20240307-v1:0` | Max **300** output tokens per job evaluation |
+| AI | Amazon Bedrock · `amazon.nova-lite-v1:0` | Max **300** output tokens per job evaluation |
 | Email | Amazon SES | HTML digest delivery |
 | Scraping | `axios` + `cheerio` / Next.js JSON | No browser automation |
 | Scheduler | EventBridge (shared tick) + dispatcher Lambda | Per-user interval: min daily, max monthly |
@@ -96,7 +96,7 @@ Scraping is **lightweight only**: `axios` + `cheerio`, or Next.js `__NEXT_DATA__
 
 - For each due user, evaluate **only jobs that have never been suggested to that user**.
 - A job is already suggested if a `MatchResult` exists for `${userId}#${jobId}` (whether or not `sentAt` is set). Skip scrape-to-email for those IDs — no second Bedrock call, no second digest line.
-- Model ID: `anthropic.claude-3-haiku-20240307-v1:0`.
+- Model ID: `amazon.nova-lite-v1:0` (Claude 3 Haiku reached end of life).
 - Cap `max_tokens` at **300** per evaluation.
 - Persist `MatchResult`: score, reasoning, matching skills, `sentAt` when emailed.
 

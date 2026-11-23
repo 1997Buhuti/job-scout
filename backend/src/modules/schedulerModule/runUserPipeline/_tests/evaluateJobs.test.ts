@@ -14,7 +14,7 @@ jest.mock('@aws-sdk/lib-dynamodb', () => ({
 
 jest.mock('@aws-sdk/client-bedrock-runtime', () => ({
   BedrockRuntimeClient: jest.fn().mockImplementation(() => ({})),
-  InvokeModelCommand: jest.fn().mockImplementation((input) => input),
+  ConverseCommand: jest.fn().mockImplementation((input) => input),
 }));
 
 // Function declaration (not const) so it's hoisted and available when the
@@ -80,6 +80,17 @@ describe('evaluateJobsForUser', () => {
       gsi1pk: 'USER#user-1',
       gsi1sk: 'SCORE#82#job-a',
     });
+  });
+
+  it('parses JSON wrapped in a markdown code fence', async () => {
+    const fenced =
+      '```json\n{"matchScore": 71, "reasoning": "Good fit", "matchingSkills": ["Node.js"]}\n```';
+    const invokeBedrock = jest.fn().mockResolvedValue(fenced);
+
+    const results = await evaluateJobsForUser('user-1', ['Software Engineer'], [job], { invokeBedrock });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ matchScore: 71, matchingSkills: ['Node.js'] });
   });
 
   it('skips a job without throwing when the Bedrock response is malformed JSON', async () => {

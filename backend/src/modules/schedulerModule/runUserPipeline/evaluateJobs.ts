@@ -1,4 +1,4 @@
-import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
+import { BedrockRuntimeClient, ConverseCommand } from '@aws-sdk/client-bedrock-runtime';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 
@@ -16,10 +16,10 @@ const MATCHES_TABLE_ENV_KEY = 'MATCHES_TABLE_NAME';
 /**
  * Locked per `specs/02-database-schema.md` §3 Bedrock constraints — do not
  * switch to amazon.nova-micro-v1:0 (reserved for the CV-structured-extract
- * feature).
+ * feature). The Converse API keeps the request shape identical across model
+ * families, so moving to a larger model is a config change.
  */
-export const BEDROCK_MODEL_ID =
-  process.env.BEDROCK_MODEL_ID ?? 'anthropic.claude-3-haiku-20240307-v1:0';
+export const BEDROCK_MODEL_ID = process.env.BEDROCK_MODEL_ID ?? 'amazon.nova-lite-v1:0';
 const BEDROCK_MAX_TOKENS = 300;
 
 const bedrockClient = new BedrockRuntimeClient({ region: 'us-east-1' });
@@ -58,23 +58,29 @@ const buildPrompt = (job: JobPosting, targetRoles: string[]): string =>
 /** Default Bedrock call — see `scrapeJobs.ts`'s `FetchHtml` for the same injection pattern. */
 export const invokeBedrockEvaluation: InvokeBedrockEvaluation = async (job, targetRoles) => {
   const response = await bedrockClient.send(
-    new InvokeModelCommand({
+    new ConverseCommand({
       modelId: BEDROCK_MODEL_ID,
-      contentType: 'application/json',
-      accept: 'application/json',
-      body: JSON.stringify({
-        anthropic_version: 'bedrock-2023-05-31',
-        max_tokens: BEDROCK_MAX_TOKENS,
-        messages: [{ role: 'user', content: buildPrompt(job, targetRoles) }],
-      }),
+      messages: [{ role: 'user', content: [{ text: buildPrompt(job, targetRoles) }] }],
+      inferenceConfig: { maxTokens: BEDROCK_MAX_TOKENS, temperature: 0 },
     }),
   );
 
-  const payload = JSON.parse(new TextDecoder().decode(response.body)) as {
-    content?: Array<{ text?: string }>;
-  };
+  return (
+    response.output?.message?.content
+      ?.map((block) => block.text ?? '')
+      .join('')
+      .trim() ?? ''
+  );
+};
 
-  return payload.content?.[0]?.text ?? '';
+/**
+ * Models often wrap JSON in a ```json fence or add a sentence around it.
+ * Take the outermost {...} so those responses still parse.
+ */
+const extractJsonObject = (raw: string): string => {
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  return start >= 0 && end > start ? raw.slice(start, end + 1) : raw;
 };
 
 /**
@@ -84,7 +90,7 @@ export const invokeBedrockEvaluation: InvokeBedrockEvaluation = async (job, targ
  */
 const parseEvaluation = (raw: string): BedrockEvaluation | null => {
   try {
-    const parsed = JSON.parse(raw) as Partial<BedrockEvaluation>;
+    const parsed = JSON.parse(extractJsonObject(raw)) as Partial<BedrockEvaluation>;
     if (
       typeof parsed.matchScore !== 'number' ||
       typeof parsed.reasoning !== 'string' ||
