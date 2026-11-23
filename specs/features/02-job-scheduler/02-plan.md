@@ -76,7 +76,7 @@ backend/src/modules/schedulerModule/
 | --- | --- |
 | Trigger | Invoked by dispatcher (async Lambda invoke or SQS later) |
 | Scraping | `axios` + `cheerio` only |
-| AI | Bedrock `anthropic.claude-3-haiku-20240307-v1:0`, `max_tokens: 300` |
+| AI | Bedrock `amazon.nova-lite-v1:0` via Converse API, `maxTokens: 300` |
 | Email | `@aws-sdk/client-ses` HTML body |
 | Omit rule | `BatchGetItem` / query matches for `USER#{userId}`; filter scraped `jobId`s that already exist |
 

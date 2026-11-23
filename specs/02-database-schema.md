@@ -238,7 +238,7 @@ Store `sentAt` as an attribute; digest Lambdas filter items where `sentAt` is ab
 
 ### Bedrock constraints (write path)
 
-- Model: `anthropic.claude-3-haiku-20240307-v1:0`
+- Model: `amazon.nova-lite-v1:0` (Converse API)
 - Max output tokens: **300** per evaluation
 - Persist truncated `reasoning` and `matchingSkills` as returned within that budget
 
