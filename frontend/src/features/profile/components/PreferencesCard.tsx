@@ -2,23 +2,49 @@
 
 import { useState } from 'react';
 
-type FrequencyOption = 'realtime' | 'daily' | 'weekly';
+import type { WorkMode } from '@/features/profile/types/userProfile';
+import {
+  SALARY_SLIDER,
+  toggleWorkMode,
+  WORK_MODE_ORDER,
+} from '@/features/profile/utils/preferences';
 
-export function PreferencesCard() {
-  const [salary, setSalary] = useState<number>(450000);
-  const [workModes, setWorkModes] = useState({
-    remote: true,
-    hybrid: true,
-    onsite: false,
-  });
-  const [frequency, setFrequency] = useState<FrequencyOption>('realtime');
+interface PreferencesCardProps {
+  minMonthlySalaryLkr: number | null;
+  workModes: WorkMode[];
+  disabled?: boolean;
+  onMinMonthlySalaryChange: (value: number | null) => void;
+  onWorkModesChange: (modes: WorkMode[]) => void;
+}
 
-  const toggleWorkMode = (key: keyof typeof workModes) => {
-    setWorkModes((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+const WORK_MODE_LABELS: Record<WorkMode, string> = {
+  remote: 'Remote',
+  hybrid: 'Hybrid',
+  onsite: 'Colombo Onsite',
+};
 
-  const formatCurrency = (val: number) => {
-    return `LKR ${val.toLocaleString()} / mo`;
+const formatCurrency = (val: number) => `LKR ${val.toLocaleString()} / mo`;
+
+export function PreferencesCard({
+  minMonthlySalaryLkr,
+  workModes,
+  disabled = false,
+  onMinMonthlySalaryChange,
+  onWorkModesChange,
+}: PreferencesCardProps) {
+  const [workModeError, setWorkModeError] = useState<string | null>(null);
+
+  const hasMinimum = minMonthlySalaryLkr !== null;
+  const sliderValue = minMonthlySalaryLkr ?? SALARY_SLIDER.default;
+
+  const handleToggleWorkMode = (mode: WorkMode) => {
+    const result = toggleWorkMode(workModes, mode);
+    if (result.error) {
+      setWorkModeError(result.error);
+      return;
+    }
+    setWorkModeError(null);
+    onWorkModesChange(result.modes);
   };
 
   return (
@@ -44,25 +70,36 @@ export function PreferencesCard() {
               MINIMUM MONTHLY SALARY EXPECTATION
             </label>
             <span className="font-mono text-sm font-semibold text-secondary">
-              {formatCurrency(salary)}
+              {hasMinimum ? formatCurrency(sliderValue) : 'Not set'}
             </span>
           </div>
-
           <input
             type="range"
-            min={250000}
-            max={800000}
-            step={25000}
-            value={salary}
-            onChange={(e) => setSalary(Number(e.target.value))}
-            className="h-2 w-full cursor-pointer rounded-lg bg-surface-container accent-[#4edea3]"
+            min={SALARY_SLIDER.min}
+            max={SALARY_SLIDER.max}
+            step={SALARY_SLIDER.step}
+            value={sliderValue}
+            disabled={disabled || !hasMinimum}
+            onChange={(e) => onMinMonthlySalaryChange(Number(e.target.value))}
+            className="h-2 w-full cursor-pointer rounded-lg bg-surface-container accent-[#4edea3] disabled:cursor-not-allowed disabled:opacity-50"
           />
-
           <div className="mt-1 flex justify-between font-mono text-[11px] text-outline">
             <span>LKR 250k</span>
             <span>LKR 500k</span>
             <span>LKR 800k+</span>
           </div>
+          <label className="mt-2 flex items-center gap-2 text-xs text-on-surface">
+            <input
+              type="checkbox"
+              checked={!hasMinimum}
+              disabled={disabled}
+              onChange={(e) =>
+                onMinMonthlySalaryChange(e.target.checked ? null : SALARY_SLIDER.default)
+              }
+              className="h-4 w-4 rounded accent-[#4edea3]"
+            />
+            No minimum
+          </label>
         </div>
 
         {/* Work Mode Checkboxes */}
@@ -71,98 +108,36 @@ export function PreferencesCard() {
             WORK MODE PREFERENCES
           </label>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <label
-              className={`flex items-center gap-2 rounded-lg p-3 border transition-colors cursor-pointer ${
-                workModes.remote
-                  ? 'border-secondary/50 bg-surface-container hover:bg-surface-bright'
-                  : 'border-outline-variant/30 bg-surface-container hover:bg-surface-bright'
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={workModes.remote}
-                onChange={() => toggleWorkMode('remote')}
-                className="h-4 w-4 rounded accent-[#4edea3]"
-              />
-              <span className="text-sm font-medium text-on-surface">Remote</span>
-            </label>
-
-            <label
-              className={`flex items-center gap-2 rounded-lg p-3 border transition-colors cursor-pointer ${
-                workModes.hybrid
-                  ? 'border-secondary/50 bg-surface-container hover:bg-surface-bright'
-                  : 'border-outline-variant/30 bg-surface-container hover:bg-surface-bright'
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={workModes.hybrid}
-                onChange={() => toggleWorkMode('hybrid')}
-                className="h-4 w-4 rounded accent-[#4edea3]"
-              />
-              <span className="text-sm font-medium text-on-surface">Hybrid</span>
-            </label>
-
-            <label
-              className={`flex items-center gap-2 rounded-lg p-3 border transition-colors cursor-pointer ${
-                workModes.onsite
-                  ? 'border-secondary/50 bg-surface-container hover:bg-surface-bright'
-                  : 'border-outline-variant/30 bg-surface-container hover:bg-surface-bright'
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={workModes.onsite}
-                onChange={() => toggleWorkMode('onsite')}
-                className="h-4 w-4 rounded accent-[#4edea3]"
-              />
-              <span className="text-sm font-medium text-on-surface">Colombo Onsite</span>
-            </label>
+            {WORK_MODE_ORDER.map((mode) => {
+              const checked = workModes.includes(mode);
+              return (
+                <label
+                  key={mode}
+                  className={`flex items-center gap-2 rounded-lg p-3 border transition-colors cursor-pointer ${
+                    checked
+                      ? 'border-secondary/50 bg-surface-container hover:bg-surface-bright'
+                      : 'border-outline-variant/30 bg-surface-container hover:bg-surface-bright'
+                  } ${disabled ? 'pointer-events-none opacity-60' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={disabled}
+                    onChange={() => handleToggleWorkMode(mode)}
+                    className="h-4 w-4 rounded accent-[#4edea3]"
+                  />
+                  <span className="text-sm font-medium text-on-surface">
+                    {WORK_MODE_LABELS[mode]}
+                  </span>
+                </label>
+              );
+            })}
           </div>
-        </div>
-
-        {/* Digest & Scrape Frequency Preset */}
-        <div>
-          <label className="mb-2 block font-mono text-[11px] font-medium tracking-wider text-outline uppercase">
-            DIGEST & SCRAPE FREQUENCY
-          </label>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <button
-              type="button"
-              onClick={() => setFrequency('realtime')}
-              className={`rounded-lg py-2.5 px-3 text-xs font-medium transition-all ${
-                frequency === 'realtime'
-                  ? 'bg-secondary text-on-secondary shadow-sm'
-                  : 'border border-outline-variant/30 bg-surface-container text-on-surface hover:bg-surface-bright'
-              }`}
-            >
-              Real-time (Webhook)
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setFrequency('daily')}
-              className={`rounded-lg py-2.5 px-3 text-xs font-medium transition-all ${
-                frequency === 'daily'
-                  ? 'bg-secondary text-on-secondary shadow-sm'
-                  : 'border border-outline-variant/30 bg-surface-container text-on-surface hover:bg-surface-bright'
-              }`}
-            >
-              Daily Digest
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setFrequency('weekly')}
-              className={`rounded-lg py-2.5 px-3 text-xs font-medium transition-all ${
-                frequency === 'weekly'
-                  ? 'bg-secondary text-on-secondary shadow-sm'
-                  : 'border border-outline-variant/30 bg-surface-container text-on-surface hover:bg-surface-bright'
-              }`}
-            >
-              Weekly Batch
-            </button>
-          </div>
+          {workModeError && (
+            <p role="alert" className="mt-2 text-xs text-error">
+              {workModeError}
+            </p>
+          )}
         </div>
       </div>
     </div>

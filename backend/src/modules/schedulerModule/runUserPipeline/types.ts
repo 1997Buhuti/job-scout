@@ -49,7 +49,11 @@ export interface JobPosting {
 export type ScrapedJob = Omit<JobPosting, 'jobId' | 'scrapedAt'>;
 
 /** A pluggable scraper for one job portal. */
-export type ScraperSource = (targetRoles: string[]) => Promise<ScrapedJob[]>;
+export interface ScraperSource {
+  (targetRoles: string[]): Promise<ScrapedJob[]>;
+  /** Used for per-source logs and failure isolation. */
+  sourceSite?: SourceSite;
+}
 
 export interface RunUserPipelineResult {
   /** Count of unique (by URL) jobs scraped across all sources. */

@@ -3,6 +3,10 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 
 import { SCHEDULER_SERVICE } from '@common/constants';
+import {
+  MAX_BEDROCK_DESCRIPTION_CHARS,
+  MAX_BEDROCK_EVALUATIONS_PER_USER,
+} from '@common/costLimits';
 import { DatabaseError } from '@common/ErrorTypes';
 import { Logger } from '@common/logger';
 
@@ -47,7 +51,7 @@ const buildPrompt = (job: JobPosting, targetRoles: string[]): string =>
   'You are evaluating how well a job posting matches a job seeker\'s target roles.\n' +
   `Target roles: ${targetRoles.join(', ')}\n` +
   `Job title: ${job.title}\n` +
-  `Job description: ${job.rawDescription}\n\n` +
+  `Job description: ${job.rawDescription.slice(0, MAX_BEDROCK_DESCRIPTION_CHARS)}\n\n` +
   'Respond with ONLY a JSON object of the shape ' +
   '{"matchScore": number 0-100, "reasoning": string, "matchingSkills": string[]}.';
 
@@ -136,7 +140,22 @@ export const evaluateJobsForUser = async (
 
   const results: MatchResult[] = [];
 
-  for (const job of jobs) {
+  // Cost guardrail: at most MAX_BEDROCK_EVALUATIONS_PER_USER Bedrock calls
+  // per user per run. Unevaluated jobs are not saved, so the next run picks them up.
+  const jobsToEvaluate = jobs.slice(0, MAX_BEDROCK_EVALUATIONS_PER_USER);
+  if (jobs.length > jobsToEvaluate.length) {
+    logger.warn({
+      message: 'Bedrock evaluation cap reached; remaining jobs deferred to a later run',
+      data: {
+        userId,
+        cap: MAX_BEDROCK_EVALUATIONS_PER_USER,
+        candidates: jobs.length,
+        deferred: jobs.length - jobsToEvaluate.length,
+      },
+    });
+  }
+
+  for (const job of jobsToEvaluate) {
     const raw = await invokeBedrock(job, targetRoles);
     const evaluation = parseEvaluation(raw);
 

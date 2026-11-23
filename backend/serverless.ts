@@ -92,6 +92,13 @@ const serverlessConfiguration: AWS = {
       },
       SES_FROM_ADDRESS: '${env:SES_FROM_ADDRESS, ssm:/job-scout/${sls:stage}/ses-from-address}',
       BEDROCK_MODEL_ID: '${env:BEDROCK_MODEL_ID, ssm:/job-scout/${sls:stage}/bedrock-model-id}',
+      MAX_USERS_PER_DISPATCH: '${env:MAX_USERS_PER_DISPATCH, "5"}',
+      MAX_SEARCH_ROLES_PER_SOURCE: '${env:MAX_SEARCH_ROLES_PER_SOURCE, "3"}',
+      MAX_JOBS_PER_SOURCE: '${env:MAX_JOBS_PER_SOURCE, "20"}',
+      MAX_BEDROCK_EVALUATIONS_PER_USER:
+        '${env:MAX_BEDROCK_EVALUATIONS_PER_USER, "20"}',
+      MAX_BEDROCK_DESCRIPTION_CHARS:
+        '${env:MAX_BEDROCK_DESCRIPTION_CHARS, "6000"}',
     },
     // Merged into the default Lambda execution role, which keeps its
     // CloudWatch Logs grants.

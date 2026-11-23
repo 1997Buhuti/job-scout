@@ -2,6 +2,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
 
 import { SCHEDULER_SERVICE } from '@common/constants';
+import { MAX_USERS_PER_DISPATCH } from '@common/costLimits';
 import { DatabaseError } from '@common/ErrorTypes';
 import { Logger } from '@common/logger';
 
@@ -88,11 +89,25 @@ export const dispatchDueUsers = async (
 
   const dueUsers = await queryDueUsers(now().toISOString());
 
+  // Cost guardrail: oldest due users run first (GSI1 sorts by nextRunAt).
+  // Users past the cap keep their due timestamp and run on a later tick.
+  const usersThisTick = dueUsers.slice(0, MAX_USERS_PER_DISPATCH);
+  if (dueUsers.length > usersThisTick.length) {
+    logger.warn({
+      message: 'Dispatch cap reached; remaining due users deferred to a later tick',
+      data: {
+        cap: MAX_USERS_PER_DISPATCH,
+        dueCount: dueUsers.length,
+        deferred: dueUsers.length - usersThisTick.length,
+      },
+    });
+  }
+
   const processed: string[] = [];
   const skipped: string[] = [];
   const failed: string[] = [];
 
-  for (const user of dueUsers) {
+  for (const user of usersThisTick) {
     if (!user.cvS3Key) {
       logger.info({
         message: 'Skipping due user: no CV uploaded',

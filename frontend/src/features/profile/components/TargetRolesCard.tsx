@@ -2,45 +2,65 @@
 
 import { useState } from 'react';
 
-export function TargetRolesCard() {
-  const [targetRoles, setTargetRoles] = useState<string[]>([
-    'Fullstack Engineer',
-    'Cloud / DevOps Engineer',
-    'Backend Developer',
-  ]);
+import {
+  addExcludedKeyword,
+  addTargetRole,
+  PREFERENCE_LIMITS,
+} from '@/features/profile/utils/preferences';
+
+interface TargetRolesCardProps {
+  targetRoles: string[];
+  excludedKeywords: string[];
+  disabled?: boolean;
+  onTargetRolesChange: (roles: string[]) => void;
+  onExcludedKeywordsChange: (keywords: string[]) => void;
+}
+
+export function TargetRolesCard({
+  targetRoles,
+  excludedKeywords,
+  disabled = false,
+  onTargetRolesChange,
+  onExcludedKeywordsChange,
+}: TargetRolesCardProps) {
   const [isAddingRole, setIsAddingRole] = useState(false);
   const [newRoleInput, setNewRoleInput] = useState('');
+  const [roleError, setRoleError] = useState<string | null>(null);
 
-  const [excludedKeywords, setExcludedKeywords] = useState<string[]>([
-    'PHP',
-    'Legacy .NET',
-    'Junior',
-  ]);
   const [isAddingKeyword, setIsAddingKeyword] = useState(false);
   const [newKeywordInput, setNewKeywordInput] = useState('');
+  const [keywordError, setKeywordError] = useState<string | null>(null);
 
   const handleAddRole = () => {
-    if (newRoleInput.trim()) {
-      setTargetRoles([...targetRoles, newRoleInput.trim()]);
-      setNewRoleInput('');
-      setIsAddingRole(false);
+    const result = addTargetRole(targetRoles, newRoleInput);
+    if (result.error) {
+      setRoleError(result.error);
+      return;
     }
+    onTargetRolesChange(result.items);
+    setNewRoleInput('');
+    setRoleError(null);
+    setIsAddingRole(false);
   };
 
   const handleRemoveRole = (role: string) => {
-    setTargetRoles(targetRoles.filter((r) => r !== role));
+    onTargetRolesChange(targetRoles.filter((r) => r !== role));
   };
 
   const handleAddKeyword = () => {
-    if (newKeywordInput.trim()) {
-      setExcludedKeywords([...excludedKeywords, newKeywordInput.trim()]);
-      setNewKeywordInput('');
-      setIsAddingKeyword(false);
+    const result = addExcludedKeyword(excludedKeywords, newKeywordInput);
+    if (result.error) {
+      setKeywordError(result.error);
+      return;
     }
+    onExcludedKeywordsChange(result.items);
+    setNewKeywordInput('');
+    setKeywordError(null);
+    setIsAddingKeyword(false);
   };
 
   const handleRemoveKeyword = (keyword: string) => {
-    setExcludedKeywords(excludedKeywords.filter((k) => k !== keyword));
+    onExcludedKeywordsChange(excludedKeywords.filter((k) => k !== keyword));
   };
 
   return (
@@ -74,8 +94,10 @@ export function TargetRolesCard() {
                 <button
                   type="button"
                   onClick={() => handleRemoveRole(role)}
-                  className="hover:opacity-75"
+                  disabled={disabled}
+                  className="hover:opacity-75 disabled:opacity-50"
                   title="Remove role"
+                  aria-label={`Remove role ${role}`}
                 >
                   <span className="material-symbols-outlined text-[14px]">
                     close
@@ -89,16 +111,21 @@ export function TargetRolesCard() {
                 <input
                   type="text"
                   value={newRoleInput}
-                  onChange={(e) => setNewRoleInput(e.target.value)}
+                  onChange={(e) => {
+                    setNewRoleInput(e.target.value);
+                    setRoleError(null);
+                  }}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddRole()}
                   placeholder="Role title..."
+                  maxLength={PREFERENCE_LIMITS.maxRoleLength}
                   autoFocus
                   className="rounded-lg border border-secondary bg-surface-container px-3 py-1.5 text-xs text-on-surface outline-none"
                 />
                 <button
                   type="button"
                   onClick={handleAddRole}
-                  className="rounded-lg bg-secondary px-3 py-1.5 text-xs font-medium text-on-secondary"
+                  disabled={disabled}
+                  className="rounded-lg bg-secondary px-3 py-1.5 text-xs font-medium text-on-secondary disabled:opacity-50"
                 >
                   Add
                 </button>
@@ -107,7 +134,8 @@ export function TargetRolesCard() {
               <button
                 type="button"
                 onClick={() => setIsAddingRole(true)}
-                className="flex items-center gap-1 rounded-lg border border-outline-variant/30 bg-surface-container px-3 py-1.5 text-xs text-on-surface hover:bg-surface-bright transition-colors"
+                disabled={disabled}
+                className="flex items-center gap-1 rounded-lg border border-outline-variant/30 bg-surface-container px-3 py-1.5 text-xs text-on-surface hover:bg-surface-bright transition-colors disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-[14px]">
                   add
@@ -116,6 +144,11 @@ export function TargetRolesCard() {
               </button>
             )}
           </div>
+          {roleError && (
+            <p role="alert" className="mt-2 text-xs text-error">
+              {roleError}
+            </p>
+          )}
         </div>
 
         {/* Excluded Keywords */}
@@ -133,8 +166,10 @@ export function TargetRolesCard() {
                 <button
                   type="button"
                   onClick={() => handleRemoveKeyword(keyword)}
-                  className="hover:text-on-surface"
+                  disabled={disabled}
+                  className="hover:text-on-surface disabled:opacity-50"
                   title="Remove keyword"
+                  aria-label={`Remove keyword ${keyword}`}
                 >
                   <span className="material-symbols-outlined text-[14px]">
                     close
@@ -148,16 +183,21 @@ export function TargetRolesCard() {
                 <input
                   type="text"
                   value={newKeywordInput}
-                  onChange={(e) => setNewKeywordInput(e.target.value)}
+                  onChange={(e) => {
+                    setNewKeywordInput(e.target.value);
+                    setKeywordError(null);
+                  }}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
                   placeholder="Exclude keyword..."
+                  maxLength={PREFERENCE_LIMITS.maxExcludedKeywordLength}
                   autoFocus
                   className="rounded-lg border border-outline-variant bg-surface-container px-3 py-1 text-xs text-on-surface outline-none"
                 />
                 <button
                   type="button"
                   onClick={handleAddKeyword}
-                  className="rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-medium text-on-surface"
+                  disabled={disabled}
+                  className="rounded-lg bg-surface-container-high px-2.5 py-1 text-xs font-medium text-on-surface disabled:opacity-50"
                 >
                   Add
                 </button>
@@ -166,7 +206,8 @@ export function TargetRolesCard() {
               <button
                 type="button"
                 onClick={() => setIsAddingKeyword(true)}
-                className="flex items-center gap-1 rounded-lg border border-dashed border-outline-variant/40 px-3 py-1 text-xs text-outline hover:border-outline hover:text-on-surface transition-colors"
+                disabled={disabled}
+                className="flex items-center gap-1 rounded-lg border border-dashed border-outline-variant/40 px-3 py-1 text-xs text-outline hover:border-outline hover:text-on-surface transition-colors disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-[14px]">
                   add
@@ -175,6 +216,11 @@ export function TargetRolesCard() {
               </button>
             )}
           </div>
+          {keywordError && (
+            <p role="alert" className="mt-2 text-xs text-error">
+              {keywordError}
+            </p>
+          )}
         </div>
       </div>
     </div>

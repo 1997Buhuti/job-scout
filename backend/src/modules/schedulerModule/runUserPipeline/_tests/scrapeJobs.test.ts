@@ -1,67 +1,125 @@
-import { scrapeTopJobs } from '@modules/schedulerModule/runUserPipeline/scrapeJobs';
+import {
+  parseItProListings,
+} from '@modules/schedulerModule/runUserPipeline/scrapers/itPro';
+import {
+  parseJobSeekerPosts,
+} from '@modules/schedulerModule/runUserPipeline/scrapers/jobSeeker';
+import {
+  parseRoosterResponse,
+} from '@modules/schedulerModule/runUserPipeline/scrapers/rooster';
+import {
+  createTopJobsScraper,
+  parseTopJobsListings,
+} from '@modules/schedulerModule/runUserPipeline/scrapers/topJobs';
+import type { PortalHttpClient } from '@modules/schedulerModule/runUserPipeline/scrapers/httpClient';
+import { isTitleRelevant } from '@modules/schedulerModule/runUserPipeline/scrapers/normalize';
 
-const FIXTURE_HTML = `
-<html>
-  <body>
-    <ul>
-      <li class="job-listing-item">
-        <a class="job-link" href="https://www.topjobs.lk/jobs/software-engineer-123">
-          <span class="job-title">Software Engineer</span>
-        </a>
-        <span class="job-company">Acme Lanka (Pvt) Ltd</span>
-        <p>Build and ship product features.</p>
-      </li>
-      <li class="job-listing-item">
-        <a class="job-link" href="https://www.topjobs.lk/jobs/senior-software-engineer-456">
-          <span class="job-title">Senior Software Engineer</span>
-        </a>
-        <span class="job-company">Beta Systems</span>
-        <p>Lead a small backend team.</p>
-      </li>
-      <li class="job-listing-item">
-        <!-- Missing href: should be skipped -->
-        <span class="job-title">Incomplete Listing</span>
-        <span class="job-company">Nobody</span>
-      </li>
-    </ul>
-  </body>
-</html>
-`;
+const TOPJOBS_HTML = `
+<table id="table"><tbody>
+  <tr id="tr0" onclick="createAlert('0','0000000201','0001574405','0000000240','ignored')">
+    <td>1</td><td>1574405</td>
+    <td>
+      <span id="hdnJC0" hidden>0001574405</span>
+      <span id="hdnEC0" hidden>0000000240</span>
+      <span id="hdnAC0" hidden>0000000201</span>
+      <h2><span>Senior Software Engineer (1)</span></h2>
+      <h1>Acme Lanka</h1>
+    </td>
+    <td>Build cloud services</td><td>Nov 20</td><td>Nov 30</td><td>Colombo</td>
+  </tr>
+</tbody></table>`;
 
-describe('scrapeTopJobs', () => {
-  it('extracts title/company/url/sourceSite from fixture HTML without any network call', async () => {
-    const fetchHtml = jest.fn().mockResolvedValue(FIXTURE_HTML);
+const mockHttp = (overrides: Partial<PortalHttpClient> = {}): PortalHttpClient => ({
+  getText: jest.fn().mockResolvedValue(''),
+  getJson: jest.fn().mockResolvedValue([]),
+  postForm: jest.fn().mockResolvedValue(''),
+  postJson: jest.fn().mockResolvedValue({}),
+  ...overrides,
+});
 
-    const jobs = await scrapeTopJobs(fetchHtml)(['Software Engineer']);
+describe('portal scrapers', () => {
+  it('drops broad generic-title matches before they consume the source cap', () => {
+    expect(isTitleRelevant('Assistant Design Engineer', ['Software Engineer'])).toBe(false);
+    expect(isTitleRelevant('Senior Software Engineer', ['Software Engineer'])).toBe(true);
+    expect(isTitleRelevant('Backend Developer', ['Backend Developer'])).toBe(true);
+  });
 
-    expect(fetchHtml).toHaveBeenCalledTimes(1);
-    expect(fetchHtml).toHaveBeenCalledWith(expect.stringContaining('Software%20Engineer'));
-
-    expect(jobs).toEqual([
-      {
-        sourceSite: 'topjobs.lk',
-        title: 'Software Engineer',
-        company: 'Acme Lanka (Pvt) Ltd',
-        url: 'https://www.topjobs.lk/jobs/software-engineer-123',
-        rawDescription: expect.stringContaining('Build and ship product features.'),
-      },
-      {
+  it('parses verified TopJobs table rows and builds a stable detail URL', () => {
+    expect(parseTopJobsListings(TOPJOBS_HTML)).toEqual([
+      expect.objectContaining({
         sourceSite: 'topjobs.lk',
         title: 'Senior Software Engineer',
-        company: 'Beta Systems',
-        url: 'https://www.topjobs.lk/jobs/senior-software-engineer-456',
-        rawDescription: expect.stringContaining('Lead a small backend team.'),
-      },
+        company: 'Acme Lanka',
+        url: 'https://www.topjobs.lk/employer/JobAdvertismentServlet?ac=0000000201&jc=0001574405&ec=0000000240',
+        rawDescription: expect.stringContaining('Build cloud services'),
+      }),
     ]);
   });
 
-  it('dedupes by URL across multiple target roles within one call', async () => {
-    const fetchHtml = jest.fn().mockResolvedValue(FIXTURE_HTML);
+  it('queries TopJobs once per role and deduplicates repeated rows', async () => {
+    const http = mockHttp({ getText: jest.fn().mockResolvedValue(TOPJOBS_HTML) });
+    const jobs = await createTopJobsScraper(http)(['Software Engineer', 'Software Engineer']);
 
-    const jobs = await scrapeTopJobs(fetchHtml)(['Software Engineer', 'Senior Software Engineer']);
+    expect(http.getText).toHaveBeenCalledTimes(1);
+    expect(http.getText).toHaveBeenCalledWith(expect.stringContaining('txtKeyWord=Software+Engineer'));
+    expect(jobs).toHaveLength(1);
+  });
 
-    expect(fetchHtml).toHaveBeenCalledTimes(2);
-    expect(jobs).toHaveLength(2);
-    expect(new Set(jobs.map((job) => job.url)).size).toBe(2);
+  it('parses Rooster API records with full HTML descriptions', () => {
+    const jobs = parseRoosterResponse({
+      body: {
+        data: [{
+          id: 42,
+          title: 'Backend Engineer',
+          company_name: 'Acme',
+          subsidiary_company_name: '',
+          description: '<p>Build <strong>APIs</strong>.</p>',
+        }],
+      },
+    });
+
+    expect(jobs).toEqual([{
+      sourceSite: 'rooster.jobs',
+      title: 'Backend Engineer',
+      company: 'Acme',
+      url: 'https://rooster.jobs/jobs/42',
+      rawDescription: 'Build APIs.',
+    }]);
+  });
+
+  it('parses verified ITPro listing cards', () => {
+    const html = `
+      <div id="job-listings"><ul class="jc-list">
+        <article id="15276" class="job-card">
+          <a class="jcl" href="/job/15276/backend-engineer/"><span class="jc-title">Backend Engineer</span></a>
+          <span class="jc-company">Acme</span><span class="la">Colombo</span>
+        </article>
+      </ul></div>`;
+
+    expect(parseItProListings(html)).toEqual([
+      expect.objectContaining({
+        sourceSite: 'itpro.lk',
+        title: 'Backend Engineer',
+        company: 'Acme',
+        url: 'https://itpro.lk/job/15276/backend-engineer/',
+      }),
+    ]);
+  });
+
+  it('parses JobSeeker WordPress posts and falls back when company is absent', () => {
+    const jobs = parseJobSeekerPosts([{
+      id: 28517,
+      link: 'https://jobseeker.lk/backend-developer/?utm_source=test',
+      title: { rendered: 'Backend Developer' },
+      content: { rendered: '<p>Company: Acme Lanka.</p><p>Build APIs.</p>' },
+    }]);
+
+    expect(jobs).toEqual([{
+      sourceSite: 'jobseeker.lk',
+      title: 'Backend Developer',
+      company: 'Acme Lanka',
+      url: 'https://jobseeker.lk/backend-developer/',
+      rawDescription: 'Company: Acme Lanka.Build APIs.',
+    }]);
   });
 });
