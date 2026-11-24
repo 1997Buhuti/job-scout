@@ -18,7 +18,7 @@
     "esModuleInterop": true,
     "strictNullChecks": false
   },
-  "include": ["src/**/*.ts", "serverless.ts", "testHelpers/**/*.ts"],
+  "include": ["src/**/*.ts", "serverless.ts", "testHelpers/**/*.ts", "scripts/**/*.ts"],
   "exclude": ["node_modules/**/*", ".serverless/**/*", ".esbuild/**/*", ".vscode/**/*"],
   "ts-node": {
     "require": ["tsconfig-paths/register"]
