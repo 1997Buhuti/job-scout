@@ -1,5 +1,12 @@
 #!/usr/bin/env node
-import { SESv2Client, GetEmailIdentityCommand } from '@aws-sdk/client-sesv2';
+import {
+  SESv2Client,
+  GetEmailIdentityCommand,
+  type GetEmailIdentityCommandOutput,
+} from '@aws-sdk/client-sesv2';
+
+/** Fields this script prints that are not part of the SDK's typed response. */
+type IdentityExtras = { IdentityArn?: string; CreatedTimestamp?: Date };
 
 /**
  * Check the status of an SES domain identity.
@@ -30,8 +37,9 @@ async function main() {
 
     console.log('\n=== Domain Identity Status ===');
     console.log(`Domain: ${domain}`);
-    console.log(`Identity ARN: ${(identity as any).IdentityArn || 'Not available'}`);
-    console.log(`Created: ${(identity as any).CreatedTimestamp?.toISOString() || 'Unknown'}`);
+    const extras = identity as IdentityExtras;
+    console.log(`Identity ARN: ${extras.IdentityArn || 'Not available'}`);
+    console.log(`Created: ${extras.CreatedTimestamp?.toISOString() || 'Unknown'}`);
     
     // Verification Status
     const verificationStatus = identity.VerificationStatus || 'UNKNOWN';
@@ -112,7 +120,8 @@ async function main() {
       console.log('• Start with low volume to build reputation');
     }
     
-  } catch (error: any) {
+  } catch (caught: unknown) {
+    const error = caught instanceof Error ? caught : new Error(String(caught));
     console.error(`❌ Error: ${error.message}`);
     
     if (error.name === 'NotFoundException') {
@@ -150,7 +159,7 @@ function getDkimDescription(status: string): string {
   return descriptions[status] || 'Unknown status';
 }
 
-function checkMissingRecords(identity: any): Array<{type: string, name: string, expected: string, issue: string}> {
+function checkMissingRecords(identity: GetEmailIdentityCommandOutput): Array<{type: string, name: string, expected: string, issue: string}> {
   const missing: Array<{type: string, name: string, expected: string, issue: string}> = [];
   
   // Check verification status

@@ -91,6 +91,9 @@ const serverlessConfiguration: AWS = {
         Ref: 'MatchesTable',
       },
       SES_FROM_ADDRESS: '${env:SES_FROM_ADDRESS, ssm:/job-scout/${sls:stage}/ses-from-address}',
+      // Account is in the SES sandbox: recipients must be verified. Set to
+      // "false" once production access is granted (task P3).
+      SES_SANDBOX_MODE: '${env:SES_SANDBOX_MODE, "true"}',
       BEDROCK_MODEL_ID: '${env:BEDROCK_MODEL_ID, ssm:/job-scout/${sls:stage}/bedrock-model-id}',
       MAX_USERS_PER_DISPATCH: '${env:MAX_USERS_PER_DISPATCH, "5"}',
       MAX_SEARCH_ROLES_PER_SOURCE: '${env:MAX_SEARCH_ROLES_PER_SOURCE, "3"}',
@@ -182,6 +185,12 @@ const serverlessConfiguration: AWS = {
              // SES identities aren't modeled as CFN resources here (MVP);
              // scope down to a verified-identity ARN once SES is set up.
              Resource: '*',
+           },
+           {
+             Effect: 'Allow',
+             // Sandbox recipient verification (emailModule/recipientStatus).
+             Action: ['ses:CreateEmailIdentity', 'ses:GetEmailIdentity'],
+             Resource: 'arn:aws:ses:${aws:region}:${aws:accountId}:identity/*',
            },
         ],
       },

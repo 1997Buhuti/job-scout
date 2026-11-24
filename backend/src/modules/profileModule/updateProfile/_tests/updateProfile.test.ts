@@ -174,6 +174,45 @@ describe('updateProfile', () => {
     expect(updateMock.mock.calls[0][0].input.UpdateExpression).toBe('SET updatedAt = :updatedAt');
   });
 
+  it('ignores client-supplied email delivery fields (R2)', async () => {
+    updateMock.mockResolvedValue({
+      Attributes: {
+        userId: 'sub-123',
+        email: 'user@example.com',
+        targetRoles: ['Engineer'],
+        scheduleIntervalDays: 7,
+        schedulerEnabled: false,
+        emailVerificationStatus: 'PENDING',
+        emailSuppressed: true,
+        createdAt: '2025-01-01T00:00:00.000Z',
+        updatedAt: '2025-01-14T00:00:00.000Z',
+      },
+    });
+
+    const result = await updateProfile(
+      buildEvent('sub-123', {
+        targetRoles: ['Engineer'],
+        emailVerificationStatus: 'VERIFIED',
+        emailSuppressed: false,
+        emailSuppressedReason: 'BOUNCE',
+        emailSuppressedAt: '2025-01-01T00:00:00.000Z',
+      }),
+    );
+
+    const input = updateMock.mock.calls[0][0].input;
+    expect(input.UpdateExpression).toBe(
+      'SET updatedAt = :updatedAt, targetRoles = :targetRoles',
+    );
+    expect(Object.keys(input.ExpressionAttributeValues).sort()).toEqual([
+      ':targetRoles',
+      ':updatedAt',
+    ]);
+    expect(result).toMatchObject({
+      emailVerificationStatus: 'PENDING',
+      emailSuppressed: true,
+    });
+  });
+
   it('updates cvProfile when provided', async () => {
     const mockCvProfile = {
       skills: ['TypeScript', 'AWS', 'Next.js'],

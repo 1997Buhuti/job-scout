@@ -18,7 +18,7 @@ const getProfileEndpoint = async (
   const logger = new Logger(PROFILE_SERVICE, context.awsRequestId);
 
   try {
-    const profile = await getProfile(event);
+    const profile = await getProfile(event, logger);
 
     logger.info({
       message: 'Profile retrieved',
