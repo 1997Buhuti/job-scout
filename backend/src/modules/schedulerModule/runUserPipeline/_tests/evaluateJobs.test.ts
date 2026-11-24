@@ -1,4 +1,10 @@
-import { evaluateJobsForUser } from '@modules/schedulerModule/runUserPipeline/evaluateJobs';
+import {
+  BEDROCK_MAX_TOKENS,
+  buildPrompt,
+  evaluateJobsForUser,
+  invokeBedrockEvaluation,
+} from '@modules/schedulerModule/runUserPipeline/evaluateJobs';
+import { MAX_REASONING_CHARS } from '@modules/schedulerModule/runUserPipeline/reasoning';
 import type { JobPosting } from '@modules/schedulerModule/runUserPipeline/types';
 
 const sendMock = jest.fn();
@@ -13,15 +19,20 @@ jest.mock('@aws-sdk/lib-dynamodb', () => ({
 }));
 
 jest.mock('@aws-sdk/client-bedrock-runtime', () => ({
-  BedrockRuntimeClient: jest.fn().mockImplementation(() => ({})),
+  BedrockRuntimeClient: jest.fn().mockImplementation(() => ({ send: mockBedrockSend })),
   ConverseCommand: jest.fn().mockImplementation((input) => input),
 }));
 
-// Function declaration (not const) so it's hoisted and available when the
-// jest.mock factory above runs during module resolution.
+// Function declarations (not const) so they're hoisted and available when
+// the jest.mock factories above run during module resolution.
 function mockSend(command: unknown) {
   return sendMock(command);
 }
+function mockBedrockSend(command: unknown) {
+  return bedrockSendMock(command);
+}
+
+const bedrockSendMock = jest.fn();
 
 const job: JobPosting = {
   jobId: 'job-a',
@@ -109,5 +120,61 @@ describe('evaluateJobsForUser', () => {
 
     expect(results).toEqual([]);
     expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it('truncates a reason longer than 200 characters before saving (C2, AC-11)', async () => {
+    const longReason = 'This role lines up with the target roles. '.repeat(10);
+    const invokeBedrock = jest
+      .fn()
+      .mockResolvedValue(JSON.stringify({ matchScore: 75, reasoning: longReason, matchingSkills: [] }));
+
+    const results = await evaluateJobsForUser('user-1', ['Software Engineer'], [job], { invokeBedrock });
+
+    expect(results[0].reasoning.length).toBeLessThanOrEqual(MAX_REASONING_CHARS);
+    expect(results[0].reasoning.endsWith('…')).toBe(true);
+    const saved = sendMock.mock.calls[0][0] as { Item: { reasoning: string } };
+    expect(saved.Item.reasoning).toBe(results[0].reasoning);
+  });
+
+  it('keeps a reason of 200 characters or fewer, with whitespace collapsed', async () => {
+    const invokeBedrock = jest.fn().mockResolvedValue(
+      JSON.stringify({ matchScore: 75, reasoning: '  Strong   fit.\nGood stack. ', matchingSkills: [] }),
+    );
+
+    const results = await evaluateJobsForUser('user-1', ['Software Engineer'], [job], { invokeBedrock });
+
+    expect(results[0].reasoning).toBe('Strong fit. Good stack.');
+  });
+});
+
+describe('Bedrock prompt (C2)', () => {
+  beforeEach(() => {
+    bedrockSendMock.mockReset();
+  });
+
+  it('asks for a short reason without score, company, or location comments', () => {
+    const prompt = buildPrompt(job, ['Software Engineer']);
+
+    expect(prompt).toContain('one or two plain sentences');
+    expect(prompt).toContain(`at most ${MAX_REASONING_CHARS} characters`);
+    expect(prompt).toContain('Do not restate the score');
+    expect(prompt).toContain('do not comment on the company name or the location');
+    expect(prompt).toContain('{"matchScore": number 0-100, "reasoning": string, "matchingSkills": string[]}');
+  });
+
+  it('keeps the 300 output-token cap', async () => {
+    bedrockSendMock.mockResolvedValue({
+      output: { message: { content: [{ text: '{"matchScore": 1}' }] } },
+    });
+
+    await invokeBedrockEvaluation(job, ['Software Engineer']);
+
+    expect(BEDROCK_MAX_TOKENS).toBe(300);
+    const command = bedrockSendMock.mock.calls[0][0] as {
+      inferenceConfig: { maxTokens: number };
+      messages: { content: { text: string }[] }[];
+    };
+    expect(command.inferenceConfig.maxTokens).toBe(300);
+    expect(command.messages[0].content[0].text).toBe(buildPrompt(job, ['Software Engineer']));
   });
 });

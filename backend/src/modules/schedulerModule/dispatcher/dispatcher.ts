@@ -82,6 +82,9 @@ export const dispatchDueUsers = async (
           email: user.email,
           targetRoles: user.targetRoles,
           scheduleIntervalDays: user.scheduleIntervalDays,
+          schedulerEnabled: user.schedulerEnabled,
+          emailSuppressed: user.emailSuppressed,
+          emailVerificationStatus: user.emailVerificationStatus,
         },
         deps.runSchedulerPipelineDeps,
       ));
