@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getCurrentUser } from 'aws-amplify/auth';
+import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -12,6 +13,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  // Auto sign-out after 4 hours of inactivity
+  useSessionTimeout({
+    idleTimeoutMs: 4 * 60 * 60 * 1000, // 4 hours
+    enabled: isAuthenticated === true,
+  });
 
   useEffect(() => {
     let isMounted = true;
