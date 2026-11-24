@@ -158,6 +158,8 @@ export const updateProfile = async (
       : event.body
     : {};
 
+  // Only these fields are client-writable. System-owned fields such as
+  // email, emailVerificationStatus, and emailSuppressed are ignored.
   const {
     targetRoles,
     excludedKeywords,

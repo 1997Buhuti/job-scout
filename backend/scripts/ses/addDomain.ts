@@ -42,14 +42,14 @@ async function main() {
     });
 
     try {
-      const createResult = await client.send(createCommand);
+      await client.send(createCommand);
       console.log(`✅ Created SES identity for ${domain}`);
       console.log(`Identity created successfully`);
       
       // New identity - get the DKIM tokens
       await printDnsRecords(client, domain, true);
-    } catch (createError: any) {
-      if (createError.name === 'AlreadyExistsException') {
+    } catch (createError: unknown) {
+      if (toError(createError).name === 'AlreadyExistsException') {
         console.log(`ℹ️ Identity for ${domain} already exists. Checking current status...`);
         // Identity exists - get current status and DKIM tokens
         await printDnsRecords(client, domain, false);
@@ -57,7 +57,8 @@ async function main() {
         throw createError;
       }
     }
-  } catch (error: any) {
+  } catch (caught: unknown) {
+    const error = toError(caught);
     console.error(`❌ Error: ${error.message}`);
     
     if (error.name === 'AccessDeniedException') {
@@ -149,9 +150,13 @@ async function printDnsRecords(client: SESv2Client, domain: string, isNew: boole
       console.log('Start with low volume sending to build domain reputation.');
     }
     
-  } catch (error: any) {
-    console.error(`Error getting identity details: ${error.message}`);
+  } catch (error: unknown) {
+    console.error(`Error getting identity details: ${toError(error).message}`);
   }
+}
+
+function toError(value: unknown): Error {
+  return value instanceof Error ? value : new Error(String(value));
 }
 
 main().catch(error => {

@@ -26,13 +26,13 @@ Complete the open questions in the spec before starting the tasks that depend on
 
 ## R — Recipient verification (sandbox)
 
-- [ ] **R1.** Add `SES_SANDBOX_MODE` to `serverless.ts` environment and `.env.example`. Default `true` until production access is granted.
-- [ ] **R2.** Add the profile fields and defaults, and return `emailVerificationStatus` and `emailSuppressed` from `GET /me/profile`. Clients must not be able to write them through `PUT /me/profile`.
-- [ ] **R3.** Create `emailModule/recipientStatus.ts`: request verification (`CreateEmailIdentity`), read status (`GetEmailIdentity`), and map to `NOT_REQUESTED`, `PENDING`, or `VERIFIED`. Do nothing when `SES_SANDBOX_MODE` is false. Covers AC-5, AC-7.
-- [ ] **R4.** Call the verification request when `getProfile` creates a profile. A failure is logged and retried on the next profile read, and never fails the request.
-- [ ] **R5.** Backfill: `getProfile` writes the Cognito `email` claim when the stored email is missing or differs, and resets verification and suppression on a change. Covers FR-8, AC-14.
-- [ ] **R6.** Unit tests for R3 to R5, including: unchanged email, changed email, and a profile created before the email field existed.
-- [ ] **R7.** Add the `ses:CreateEmailIdentity` and `ses:GetEmailIdentity` permissions to the Lambda role in `serverless.ts`.
+- [x] **R1.** Add `SES_SANDBOX_MODE` to `serverless.ts` environment and `.env.example`. Default `true` until production access is granted.
+- [x] **R2.** Add the profile fields and defaults, and return `emailVerificationStatus` and `emailSuppressed` from `GET /me/profile`. Clients must not be able to write them through `PUT /me/profile`.
+- [x] **R3.** Create `emailModule/recipientStatus.ts`: request verification (`CreateEmailIdentity`), read status (`GetEmailIdentity`), and map to `NOT_REQUESTED`, `PENDING`, or `VERIFIED`. Do nothing when `SES_SANDBOX_MODE` is false. Covers AC-5, AC-7.
+- [x] **R4.** Call the verification request when `getProfile` creates a profile. A failure is logged and retried on the next profile read, and never fails the request.
+- [x] **R5.** Backfill: `getProfile` writes the Cognito `email` claim when the stored email is missing or differs, and resets verification and suppression on a change. Covers FR-8, AC-14.
+- [x] **R6.** Unit tests for R3 to R5, including: unchanged email, changed email, and a profile created before the email field existed.
+- [x] **R7.** Add the `ses:CreateEmailIdentity` and `ses:GetEmailIdentity` permissions to the Lambda role in `serverless.ts`.
 
 ## M — Delivery pipeline
 
