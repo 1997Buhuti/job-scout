@@ -36,21 +36,21 @@ Complete the open questions in the spec before starting the tasks that depend on
 
 ## M — Delivery pipeline
 
-- [ ] **M1.** Create `emailModule/senderCheck.ts`. Refuse to send when the sender domain is not verified, with a logged reason. Covers AC-4.
-- [ ] **M2.** Create `emailModule/deliverDigest.ts` with the order of checks from the plan: unsent matches, suppressed, unsubscribed, sender, recipient, send. Return a result that names the skip or failure reason.
-- [ ] **M3.** Query a user's qualifying matches that have no `sentAt`, and include them with the run's new matches. Stamp `sentAt` only after SES accepts the email. Covers AC-8, AC-9, AC-10.
-- [ ] **M4.** Update `runSchedulerPipelineForUser` to call `deliverDigest`, advance the schedule for skips and permanent or retried-out failures, and keep the dependency-injection pattern.
-- [ ] **M5.** Add bounded retry for transient SES errors.
-- [ ] **M6.** Unit tests for M1 to M5: unverified recipient skip (AC-6), rejected send leaves matches unstamped, an old unsent match appears in the next digest once, a stamped match never reappears, and a skip does not fail the run.
-- [ ] **M7.** Scope `ses:SendEmail` to the verified sender identity in `serverless.ts` once S5 is done.
+- [x] **M1.** Create `emailModule/senderCheck.ts`. Refuse to send when the sender domain is not verified, with a logged reason. Covers AC-4.
+- [x] **M2.** Create `emailModule/deliverDigest.ts` with the order of checks from the plan: unsent matches, suppressed, unsubscribed, sender, recipient, send. Return a result that names the skip or failure reason.
+- [x] **M3.** Query a user's qualifying matches that have no `sentAt`, and include them with the run's new matches. Stamp `sentAt` only after SES accepts the email. Covers AC-8, AC-9, AC-10.
+- [x] **M4.** Update `runSchedulerPipelineForUser` to call `deliverDigest`, advance the schedule for skips and permanent or retried-out failures, and keep the dependency-injection pattern.
+- [x] **M5.** Add bounded retry for transient SES errors.
+- [x] **M6.** Unit tests for M1 to M5: unverified recipient skip (AC-6), rejected send leaves matches unstamped, an old unsent match appears in the next digest once, a stamped match never reappears, and a skip does not fail the run.
+- [x] **M7.** Scope `ses:SendEmail` to the verified sender identity in `serverless.ts` once S5 is done.
 
 ## C — Content
 
-- [ ] **C1.** Create `emailModule/buildDigest.ts` with HTML and plain-text bodies. Move the escaping from `sendDigest.ts` and allow only `http` and `https` job links. Covers FR-5.
-- [ ] **C2.** Update the Bedrock prompt in `evaluateJobs.ts` to ask for a reason of one or two sentences, at most 200 characters, without comments about company name or location. Keep `maxTokens` at 300. Truncate any longer reason to 200 characters when saving.
-- [ ] **C3.** Switch sending to SES v2 `SendEmail` with both bodies and headers.
-- [ ] **C4.** Unit tests for C1 to C3: escaping, link scheme check, text and HTML parity, and reason length. Covers AC-11.
-- [ ] **C5.** Update `evaluateJobs.test.ts` for the prompt and truncation changes.
+- [x] **C1.** Create `emailModule/buildDigest.ts` with HTML and plain-text bodies. Move the escaping from `sendDigest.ts` and allow only `http` and `https` job links. Covers FR-5.
+- [x] **C2.** Update the Bedrock prompt in `evaluateJobs.ts` to ask for a reason of one or two sentences, at most 200 characters, without comments about company name or location. Keep `maxTokens` at 300. Truncate any longer reason to 200 characters when saving.
+- [x] **C3.** Switch sending to SES v2 `SendEmail` with both bodies and headers.
+- [x] **C4.** Unit tests for C1 to C3: escaping, link scheme check, text and HTML parity, and reason length. Covers AC-11.
+- [x] **C5.** Update `evaluateJobs.test.ts` for the prompt and truncation changes.
 
 ## U — Unsubscribe
 

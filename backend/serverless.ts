@@ -139,7 +139,13 @@ const serverlessConfiguration: AWS = {
            },
            {
              Effect: 'Allow',
-             Action: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
+             // BatchGetItem: job details for older unsent matches in a digest.
+             Action: [
+               'dynamodb:GetItem',
+               'dynamodb:BatchGetItem',
+               'dynamodb:PutItem',
+               'dynamodb:UpdateItem',
+             ],
              Resource: {
                'Fn::GetAtt': ['JobsTable', 'Arn'],
              },
@@ -181,14 +187,24 @@ const serverlessConfiguration: AWS = {
            },
            {
              Effect: 'Allow',
-             Action: ['ses:SendEmail', 'ses:SendRawEmail'],
-             // SES identities aren't modeled as CFN resources here (MVP);
-             // scope down to a verified-identity ARN once SES is set up.
-             Resource: '*',
+             // Digests go through SES v2 SendEmail (emailModule/sesSend).
+             // Scoped to the configured sender with ses:FromAddress rather
+             // than to one identity ARN: in the sandbox, SES can also
+             // authorize against the recipient's identity, which a
+             // sender-only Resource would deny. Add the configuration set
+             // ARN here when E1 attaches one to sends.
+             Action: ['ses:SendEmail'],
+             Resource: 'arn:aws:ses:${aws:region}:${aws:accountId}:identity/*',
+             Condition: {
+               StringEquals: {
+                 'ses:FromAddress': '${self:provider.environment.SES_FROM_ADDRESS}',
+               },
+             },
            },
            {
              Effect: 'Allow',
-             // Sandbox recipient verification (emailModule/recipientStatus).
+             // Sandbox recipient verification (emailModule/recipientStatus)
+             // and the sender domain check (emailModule/senderCheck).
              Action: ['ses:CreateEmailIdentity', 'ses:GetEmailIdentity'],
              Resource: 'arn:aws:ses:${aws:region}:${aws:accountId}:identity/*',
            },

@@ -10,6 +10,7 @@ import {
 import { DatabaseError } from '@common/ErrorTypes';
 import { Logger } from '@common/logger';
 
+import { MAX_REASONING_CHARS, truncateReasoning } from './reasoning';
 import type { JobPosting, MatchResult } from './types';
 
 const MATCHES_TABLE_ENV_KEY = 'MATCHES_TABLE_NAME';
@@ -20,7 +21,8 @@ const MATCHES_TABLE_ENV_KEY = 'MATCHES_TABLE_NAME';
  * families, so moving to a larger model is a config change.
  */
 export const BEDROCK_MODEL_ID = process.env.BEDROCK_MODEL_ID ?? 'amazon.nova-lite-v1:0';
-const BEDROCK_MAX_TOKENS = 300;
+/** Output-token cap from the scheduler spec. Unchanged by the shorter-reason prompt. */
+export const BEDROCK_MAX_TOKENS = 300;
 
 const bedrockClient = new BedrockRuntimeClient({ region: 'us-east-1' });
 const ddbClient = new DynamoDBClient({ region: 'us-east-1' });
@@ -47,13 +49,16 @@ export type InvokeBedrockEvaluation = (
   targetRoles: string[],
 ) => Promise<string>;
 
-const buildPrompt = (job: JobPosting, targetRoles: string[]): string =>
+export const buildPrompt = (job: JobPosting, targetRoles: string[]): string =>
   'You are evaluating how well a job posting matches a job seeker\'s target roles.\n' +
   `Target roles: ${targetRoles.join(', ')}\n` +
   `Job title: ${job.title}\n` +
   `Job description: ${job.rawDescription.slice(0, MAX_BEDROCK_DESCRIPTION_CHARS)}\n\n` +
   'Respond with ONLY a JSON object of the shape ' +
-  '{"matchScore": number 0-100, "reasoning": string, "matchingSkills": string[]}.';
+  '{"matchScore": number 0-100, "reasoning": string, "matchingSkills": string[]}.\n' +
+  `"reasoning" must be one or two plain sentences, at most ${MAX_REASONING_CHARS} characters, ` +
+  'saying why the role fits or does not fit the target roles. ' +
+  'Do not restate the score, and do not comment on the company name or the location.';
 
 /** Default Bedrock call — see `scrapeJobs.ts`'s `FetchHtml` for the same injection pattern. */
 export const invokeBedrockEvaluation: InvokeBedrockEvaluation = async (job, targetRoles) => {
@@ -178,7 +183,7 @@ export const evaluateJobsForUser = async (
       userId,
       jobId: job.jobId,
       matchScore: evaluation.matchScore,
-      reasoning: evaluation.reasoning,
+      reasoning: truncateReasoning(evaluation.reasoning),
       matchingSkills: evaluation.matchingSkills,
       evaluatedAt: new Date().toISOString(),
     };
