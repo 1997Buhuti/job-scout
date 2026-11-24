@@ -13,7 +13,9 @@
     "package": "serverless package --stage dev --aws-profile dev-manakal",
     "compile": "tsc --noEmit",
     "test": "jest --config=jest.config.js",
-    "lint": "eslint . --max-warnings=0"
+    "lint": "eslint . --max-warnings=0",
+    "ses:add-domain": "npx ts-node scripts/ses/addDomain.ts",
+    "ses:check-domain": "npx ts-node scripts/ses/checkDomain.ts"
   },
   "engines": {
     "node": ">=24.0.0"
@@ -23,6 +25,7 @@
     "@aws-sdk/client-dynamodb": "^3.1145.0",
     "@aws-sdk/client-s3": "^3.1145.0",
     "@aws-sdk/client-ses": "^3.1145.0",
+    "@aws-sdk/client-sesv2": "^3.1176.0",
     "@aws-sdk/lib-dynamodb": "^3.1145.0",
     "@aws-sdk/s3-request-presigner": "^3.1145.0",
     "@middy/core": "^7.7.2",
@@ -39,7 +42,7 @@
     "@serverless/typescript": "^4.30.0",
     "@types/aws-lambda": "^8.10.162",
     "@types/jest": "^30.0.0",
-    "@types/node": "^24.13.3",
+    "@types/node": "^26.6.6",
     "esbuild": "^0.28.1",
     "eslint": "^9.39.2",
     "globals": "^14.0.0",
