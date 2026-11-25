@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { signIn } from 'aws-amplify/auth';
 
@@ -13,12 +13,16 @@ function fieldClassName() {
 
 export function SignInForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { refresh } = useUserProfile();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  // Check if redirected due to session timeout
+  const sessionTimeout = searchParams.get('reason') === 'session_timeout';
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -58,6 +62,12 @@ export function SignInForm() {
           Enter your credentials to access your recruitment dashboard.
         </p>
       </div>
+
+      {sessionTimeout && (
+        <div className="mb-4 rounded-lg border border-secondary/30 bg-secondary/10 px-3 py-2 text-sm text-on-surface">
+          Your session expired after 4 hours of inactivity. Please sign in again.
+        </div>
+      )}
 
       <form className="space-y-4" onSubmit={onSubmit}>
         <div>
