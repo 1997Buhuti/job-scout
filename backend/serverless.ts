@@ -5,26 +5,35 @@ import { profileFunctions } from './src/modules/profileModule';
 import { schedulerFunctions } from './src/modules/schedulerModule';
 import { getPresignedUrlFunctions } from './src/modules/cvModule/getPresignedUrl';
 import { parseCvPdfFunctions } from './src/modules/cvModule/parseCvPdf';
+import { emailFunctions } from './src/modules/emailModule';
 import { getCustom } from './src/serverless/configs/serverless-common.config';
 import { getCvBucketResources } from './src/serverless/resources/cv-bucket';
 import { getJobsTableResources } from './src/serverless/resources/jobs-table';
 import { getMatchesTableResources } from './src/serverless/resources/matches-table';
+import { getSesEventResources } from './src/serverless/resources/ses-events';
+import { getUsersTableResources } from './src/serverless/resources/users-table';
 
 const Custom = getCustom();
 const cvBucketResources = getCvBucketResources();
 const jobsTableResources = getJobsTableResources();
 const matchesTableResources = getMatchesTableResources();
+const usersTableResources = getUsersTableResources();
+const sesEventResources = getSesEventResources();
 const Resources: AWS['resources'] = {
   ...cvBucketResources,
   Resources: {
     ...cvBucketResources.Resources,
     ...jobsTableResources.Resources,
     ...matchesTableResources.Resources,
+    ...usersTableResources.Resources,
+    ...sesEventResources.Resources,
   },
   Outputs: {
     ...cvBucketResources.Outputs,
     ...jobsTableResources.Outputs,
     ...matchesTableResources.Outputs,
+    ...usersTableResources.Outputs,
+    ...sesEventResources.Outputs,
   },
 };
 
@@ -102,6 +111,9 @@ const serverlessConfiguration: AWS = {
         '${env:MAX_BEDROCK_EVALUATIONS_PER_USER, "20"}',
       MAX_BEDROCK_DESCRIPTION_CHARS:
         '${env:MAX_BEDROCK_DESCRIPTION_CHARS, "6000"}',
+      UNSUBSCRIBE_SIGNING_SECRET: '${env:UNSUBSCRIBE_SIGNING_SECRET, ssm:/job-scout/${sls:stage}/unsubscribe-signing-secret}',
+      // E1: SES configuration set for bounce/complaint tracking
+      SES_CONFIGURATION_SET_NAME: { Ref: 'SesConfigurationSet' },
     },
     // Merged into the default Lambda execution role, which keeps its
     // CloudWatch Logs grants.
@@ -133,6 +145,13 @@ const serverlessConfiguration: AWS = {
            {
              Effect: 'Allow',
              Action: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
+             Resource: {
+               'Fn::GetAtt': ['UsersTable', 'Arn'],
+             },
+           },
+           {
+             Effect: 'Allow',
+             Action: ['dynamodb:UpdateItem'],
              Resource: {
                'Fn::GetAtt': ['UsersTable', 'Arn'],
              },
@@ -191,10 +210,14 @@ const serverlessConfiguration: AWS = {
              // Scoped to the configured sender with ses:FromAddress rather
              // than to one identity ARN: in the sandbox, SES can also
              // authorize against the recipient's identity, which a
-             // sender-only Resource would deny. Add the configuration set
-             // ARN here when E1 attaches one to sends.
+             // sender-only Resource would deny.
              Action: ['ses:SendEmail'],
-             Resource: 'arn:aws:ses:${aws:region}:${aws:accountId}:identity/*',
+             Resource: [
+               'arn:aws:ses:${aws:region}:${aws:accountId}:identity/*',
+               // `Ref` on a configuration set returns its name, not an ARN,
+               // and IAM rejects a non-ARN resource, so build the ARN.
+               'arn:aws:ses:${aws:region}:${aws:accountId}:configuration-set/job-scout-${sls:stage}-config-set',
+             ],
              Condition: {
                StringEquals: {
                  'ses:FromAddress': '${self:provider.environment.SES_FROM_ADDRESS}',
@@ -208,6 +231,27 @@ const serverlessConfiguration: AWS = {
              Action: ['ses:CreateEmailIdentity', 'ses:GetEmailIdentity'],
              Resource: 'arn:aws:ses:${aws:region}:${aws:accountId}:identity/*',
            },
+           {
+             Effect: 'Allow',
+             // E3: handleSesEvent Lambda needs to update user profiles
+             // when bounces/complaints are received
+             Action: ['dynamodb:UpdateItem', 'dynamodb:Query'],
+             Resource: [
+               { 'Fn::GetAtt': ['UsersTable', 'Arn'] },
+               {
+                 'Fn::Join': [
+                   '',
+                   [{ 'Fn::GetAtt': ['UsersTable', 'Arn'] }, '/index/EmailIndex'],
+                 ],
+               },
+             ],
+           },
+           {
+             Effect: 'Allow',
+             // E3: handleSesEvent Lambda needs to receive SNS messages
+             Action: ['sns:Subscribe'],
+             Resource: { Ref: 'SesBounceComplaintTopic' },
+           },
         ],
       },
     },
@@ -219,6 +263,7 @@ const serverlessConfiguration: AWS = {
     ...parseCvPdfFunctions,
     ...profileFunctions,
     ...schedulerFunctions,
+    ...emailFunctions,
   },
   package: {
     individually: true,

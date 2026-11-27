@@ -16,14 +16,40 @@ export interface DigestEmail {
   html: string;
   text: string;
   headers?: EmailHeader[];
+  userId?: string;
 }
 
 export type SendDigestEmail = (email: DigestEmail) => Promise<{ messageId?: string }>;
 
+/** Base URL for the unsubscribe page (configurable via env). */
+const UNSUBSCRIBE_BASE_URL =
+  process.env.UNSUBSCRIBE_BASE_URL || 'https://job-scout.app';
+
 /** C3: one SES v2 `SendEmail` call with HTML and text bodies and optional headers. */
 export const sendDigestEmail: SendDigestEmail = async (email) => {
   const headers = email.headers?.map(({ name, value }) => ({ Name: name, Value: value }));
+  const allHeaders = [...(headers ?? [])];
 
+  // U4: Add List-Unsubscribe headers (including one-click)
+  if (email.userId) {
+    const { signUnsubscribeToken } = await import(
+      './unsubscribeToken/unsubscribeToken'
+    );
+    const token = signUnsubscribeToken(
+      email.userId,
+      process.env.UNSUBSCRIBE_SIGNING_SECRET ?? '',
+    );
+    const unsubscribeUrl = `${UNSUBSCRIBE_BASE_URL}/unsubscribe?token=${token}`;
+    const unsubscribeMailto = `mailto:unsubscribe@job-scout.app?subject=Unsubscribe`;
+
+    allHeaders.push(
+      { Name: 'List-Unsubscribe', Value: `<${unsubscribeUrl}>, <${unsubscribeMailto}>` },
+      { Name: 'List-Unsubscribe-Post', Value: 'List-Unsubscribe=One-Click' },
+    );
+  }
+
+  const configSetName = process.env.SES_CONFIGURATION_SET_NAME;
+  
   const output = await sesClient.send(
     new SendEmailCommand({
       FromEmailAddress: email.from,
@@ -35,9 +61,10 @@ export const sendDigestEmail: SendDigestEmail = async (email) => {
             Html: { Data: email.html, Charset: 'UTF-8' },
             Text: { Data: email.text, Charset: 'UTF-8' },
           },
-          ...(headers && headers.length > 0 ? { Headers: headers } : {}),
+          ...(allHeaders.length > 0 ? { Headers: allHeaders } : {}),
         },
       },
+      ...(configSetName ? { ConfigurationSetName: configSetName } : {}),
     }),
   );
 
