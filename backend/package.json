@@ -15,7 +15,8 @@
     "test": "jest --config=jest.config.js",
     "lint": "eslint . --max-warnings=0",
     "ses:add-domain": "npx ts-node scripts/ses/addDomain.ts",
-    "ses:check-domain": "npx ts-node scripts/ses/checkDomain.ts"
+    "ses:check-domain": "npx ts-node scripts/ses/checkDomain.ts",
+    "trigger:jobscout": "cross-env AWS_PROFILE=dev-manakal npx tsx scripts/triggerJobScout.ts"
   },
   "engines": {
     "node": ">=24.0.0"
@@ -26,6 +27,7 @@
     "@aws-sdk/client-s3": "^3.1145.0",
     "@aws-sdk/client-ses": "^3.1145.0",
     "@aws-sdk/client-sesv2": "^3.1176.0",
+    "@aws-sdk/credential-providers": "^3.1176.0",
     "@aws-sdk/lib-dynamodb": "^3.1145.0",
     "@aws-sdk/s3-request-presigner": "^3.1145.0",
     "@middy/core": "^7.7.2",
@@ -43,6 +45,8 @@
     "@types/aws-lambda": "^8.10.162",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.6",
+    "aws-sdk-client-mock": "^4.1.0",
+    "cross-env": "^10.1.0",
     "esbuild": "^0.28.1",
     "eslint": "^9.39.2",
     "globals": "^14.0.0",
